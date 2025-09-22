@@ -1,0 +1,27 @@
+<HotelFindRequest>
+    <Authentication>    
+        <AgentCode>CD33604</AgentCode>
+        <UserName>GOFLY1</UserName>
+    </Authentication>
+    <Booking>
+        <ArrivalDate>19/09/2025</ArrivalDate>
+        <DepartureDate>24/09/2025</DepartureDate>
+        <CountryCode>NG</CountryCode>
+        <City>31606</City>
+        <GuestNationality>NG</GuestNationality>
+        <HotelRatings>
+            <HotelRating>1</HotelRating>
+            <HotelRating>2</HotelRating>
+            <HotelRating>3</HotelRating>
+            <HotelRating>4</HotelRating>
+            <HotelRating>5</HotelRating>
+        </HotelRatings>
+        <Rooms>
+            <Room>
+                <Type>Room-1</Type>
+                <NoOfAdults>1</NoOfAdults>
+                <NoOfChilds>0</NoOfChilds>
+            </Room>
+        </Rooms>
+    </Booking>
+</HotelFindRequest>

@@ -1,0 +1,25 @@
+{
+	"name"            : "pickmeup",
+	"title"           : "PickMeUp",
+	"description"     : "Really simple, powerful, customizable and lightweight standalone datepicker",
+	"keywords"        : [
+		"datepicker",
+		"date",
+		"calendar"
+	],
+	"version"         : "3.2.1",
+	"homepage"        : "https://github.com/nazar-pc/PickMeUp",
+	"author"          : "Nazar Mokrynskyi <nazar@mokrynskyi.com>",
+	"repository"      : {
+		"type" : "git",
+		"url"  : "git://github.com/nazar-pc/PickMeUp.git"
+	},
+	"license"         : "0BSD",
+	"demo"            : "http://nazar-pc.github.io/PickMeUp",
+	"main"            : "dist/pickmeup.min.js",
+	"devDependencies" : {
+		"google-closure-compiler" : "^20181125.0.1",
+		"gulp"                    : "^4.0.0"
+	},
+	"faircodeId"      : "pd_6bOuEo9pHbWVEqzm9F3K3T"
+}
