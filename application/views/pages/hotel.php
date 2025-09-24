@@ -2,7 +2,7 @@
 	<div class="container">
 		<div class="row g-3">
 			<div class="col-lg-12 d-lg-none">
-				<a href="hotel-3.html">
+				<a href="#" onclick="document.getElementById('pricesSection').scrollIntoView({ behavior: 'smooth' });">
 					<img src="<?= base_url('assets/images/icons/arrow-left-line.svg') ?>" alt="">
 				</a>
 			</div>
@@ -190,9 +190,8 @@
 					</div>
 				</div>
 				<div class="col-md-12 d-none d-lg-block mt-3" data-aos="fade-up" data-aos-duration="1000">
-					<p><i class="ri-map-pin-line ri-lg"></i> 25, Lorem Ipsum lane off Dudu street, is simply
-						dummy text of the printing and typesetting</p>
-					<a href="#" class="small">Show on map</a>
+					<p><i class="ri-map-pin-line ri-lg"></i> <?= $hotelDetails->HotelAddress . ', ' . $hotelDetails->City . ' ' . $hotelDetails->Country ?></p>
+					<a href="https://www.google.com/maps/@<?= $hotelDetails->Latitude . ',' . $hotelDetails->Longitude . ',15z' ?>" class="small" target="_blank">Show on map</a>
 				</div>
 				<!-- web -->
 				<div class="d-none d-lg-block">
@@ -340,7 +339,7 @@
 		<div class="row mt-5">
 			<div class="col-lg-8" data-aos="fade-up" data-aos-duration="1000">
 				<p>
-					Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown
+					<?= !empty($hotelDetails->Description) ? $hotelDetails->Description : "Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown
 					printer took a galley of type and scrambled it to make a type specimen book. It has survived not
 					only five centuries, but also the leap into electronic typesetting, remaining essentially
 					unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem
@@ -348,7 +347,8 @@
 					printer took a galley of type and scrambled it to make a type specimen book. It has survived not
 					only five centuries, but also the leap into electronic typesetting, remaining essentially
 					unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem
-					Lorem Ipsum has been the industry's standard dummy text ever since</p>
+					Lorem Ipsum has been the industry's standard dummy text ever since" ?>
+					</p>
 			</div>
 			<div class="col-lg-4">
 				<div class="card border-0" data-aos="fade-up" data-aos-duration="1000">
@@ -388,7 +388,7 @@
 						</div>
 
 						<div class="d-grid">
-							<a href="hotel-3.html" class="btn btn-primary fw-bold">Reserve</a>
+							<a href="#" onclick="document.getElementById('pricesSection').scrollIntoView({ behavior: 'smooth' });" class="btn btn-primary fw-bold">Reserve</a>
 						</div>
 					</div>
 				</div>
@@ -479,7 +479,7 @@
 							<p><i class="ri-user-fill"></i> <i class="ri-user-fill"></i></p>
 						</div>
 						<div class="col-lg-2">
-							<h5 class="fw-bold text-success"><?= $defaults->currency.$detail->TotalRate ?></h5>
+							<h5 class="fw-bold text-success"><?= $defaults->currency.' '. $detail->TotalRate ?></h5>
 							<p class="small">+ NGN7,500 taxes and
 								charges.
 							</p>
@@ -538,13 +538,32 @@
 									</div>
 								</div>
 								<div class="col-8 d-grid">
-									<a href="hotel-3.html" class="btn btn-primary rounded-0 ms-3">Reserve</a>
+									<form action="<?php echo site_url('booking/index')  ?>" method="post">
+										<input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
+										<input type="hidden" name="searchSessionId" value="<?= $defaults->searchSessionId ?>">
+										<input type="hidden" name="arrivalDate" value="<?= $defaults->arrival ?>">
+										<input type="hidden" name="departureDate" value="<?= $defaults->departure ?>">
+										<input type="hidden" name="countryCode" value="<?= $defaults->countryCode ?>">
+										<input type="hidden" name="cityCode" value="<?= $hotelDetails->CityCode ?>">
+										<input type="hidden" name="hotelId" value="<?= $hotelDetails->HotelId ?>">
+										<input type="hidden" name="hotelName" value="<?= $hotelDetails->HotelName ?? '' ?>">
+										<input type="hidden" name="price" value="<?= $detail->TotalRate ?>">
+										<input type="hidden" name="currency" value="<?= $defaults->hotelCurrency ?>">
+										<input type="hidden" name="roomType" value="<?= $detail->Type ?>">
+										<input type="hidden" name="boardBasis" value="<?= $detail->BoardBasis ?>">
+										<input type="hidden" name="bookingKey" value="<?= $detail->BookingKey ?>">
+										<input type="hidden" name="adults" value="<?= $detail->Adults ?? 1 ?>">
+										<input type="hidden" name="children" value="<?= $detail->Children ?? 0 ?>">
+										<input type="hidden" name="totalRooms" value="<?= $detail->TotalRooms ?? 1 ?>">
+										<input type="hidden" name="totalRate" value="<?= $detail->TotalRate ?>">
+										<button type="submit" class="btn btn-primary rounded-0 ms-3">Reserve</button>
+									</form>
 									<ul class="mt-3">
 										<li>
 											Confirmation is immediate.
 										</li>
 										<li>
-											<?= $detail->TermsAndConditions ?? 'No booking or credit card fees.' ?>
+											<?= !empty($detail->TermsAndConditions) ? $detail->TermsAndConditions : 'No booking or credit card fees.' ?>
 										</li>
 									</ul>
 								</div>
@@ -650,14 +669,34 @@
 							</div>
 						</div>
 						<div class="col-md-12 mt-5">
-							<a href="hotel-3.html" class="btn btn-primary px-5 rounded-0 fw-bold">Reserve</a>
+							<form action="<?php echo site_url('booking/index')  ?>" method="post">
+								<input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
+								<input type="hidden" name="searchSessionId" value="<?= $apiResponse->SearchSessionId ?>">
+								<input type="hidden" name="arrivalDate" value="<?= $defaults->arrival ?>">
+								<input type="hidden" name="departureDate" value="<?= $defaults->departure ?>">
+								<input type="hidden" name="countryCode" value="<?= $apiResponse->CountryCode ?>">
+								<input type="hidden" name="cityCode" value="<?= $hotelDetails->Hotels->CityCode ?>">
+								<input type="hidden" name="hotelId" value="<?= $hotelDetails->Hotels->HotelId ?>">
+								<input type="hidden" name="hotelName" value="<?= $hotelDetails->Hotels->HotelName ?? '' ?>">
+								<input type="hidden" name="price" value="<?= $detail->TotalRate ?>">
+								<input type="hidden" name="currency" value="<?= $apiResponse->Currency ?>">
+								<input type="hidden" name="roomType" value="<?= $detail->Type ?>">
+								<input type="hidden" name="boardBasis" value="<?= $detail->BoardBasis ?>">
+								<input type="hidden" name="bookingKey" value="<?= $detail->BookingKey ?>">
+								<input type="hidden" name="adults" value="<?= $detail->Adults ?? 1 ?>">
+								<input type="hidden" name="children" value="<?= $detail->Children ?? 0 ?>">
+								<input type="hidden" name="totalRooms" value="<?= $detail->TotalRooms ?? 1 ?>">
+								<input type="hidden" name="totalRate" value="<?= $detail->TotalRate ?>">
+								<button type="submit" class="btn btn-primary px-5 rounded-0 fw-bold">Reserve</button>
+							</form>
+
 							<ul class="mt-3 ms-n3 lh-1">
 								<li>Confirmation is immediate.</li>
 								<li><?= $detail->TermsAndConditions ?? 'No booking or credit card fees.' ?></li>
 							</ul>
 						</div>
 						<div class="col-md-12 mt-3">
-							<h4 class="text-success"><?= $defaults->currency.$detail->TotalRate ?></h4>
+							<h4 class="text-success"><?= $defaults->currency.' '.$detail->TotalRate ?></h4>
 							<p class="small">+ NGN7,500 taxes and charges.
 							</p>
 						</div>
@@ -1104,7 +1143,7 @@
 					<h5 class="fw-bold">The fine print</h5>
 				</div>
 				<div class="ms-auto">
-					<a href="hotel-3.html" type="button" class="btn btn-primary">See Availability</a>
+					<a href="#" onclick="document.getElementById('pricesSection').scrollIntoView({ behavior: 'smooth' });" type="button" class="btn btn-primary">See Availability</a>
 				</div>
 			</div>
 

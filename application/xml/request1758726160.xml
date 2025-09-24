@@ -1,0 +1,29 @@
+<PreBookingRequest>
+    <Authentication>
+        <AgentCode>CD33604</AgentCode>
+        <UserName>GOFLY1</UserName>
+    </Authentication>
+    <PreBooking>
+        <SearchSessionId>175872614972617587261496746</SearchSessionId>
+        <ArrivalDate>24/09/2025</ArrivalDate>
+        <DepartureDate>29/09/2025</DepartureDate>
+        <GuestNationality>NG</GuestNationality>
+        <CountryCode>NG</CountryCode>
+        <City>31606</City>
+        <HotelId>729647</HotelId>
+        <Price>36.1386</Price>
+        <Currency>USD</Currency>
+        <RoomDetails>
+            <RoomDetail>
+                <Type>Superior Room, 1 Queen Bed</Type>
+                <BoardBasis>Breakfast</BoardBasis>
+                <BookingKey>MzQ3tTA3MjM0sQSRcI6ZuYmZboSHoYWprpGukYGRqa6Bpa6Ria65kaWZibluNgA</BookingKey>
+                <Adults>1</Adults>
+                <Children>0</Children>
+                <ChildrenAges></ChildrenAges>
+                <TotalRooms>1</TotalRooms>
+                <TotalRate>36.1386000</TotalRate>
+            </RoomDetail>
+        </RoomDetails>
+    </PreBooking>
+</PreBookingRequest>

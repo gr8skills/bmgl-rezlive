@@ -73,12 +73,14 @@ class Hotel extends CI_Controller {
 		$rooms    = isset($guestsArr[2]) ? (int)$guestsArr[2] : 0;
 
 		$childrenAges = '';
-		if ($children > 0) {
+		if ((int)$children > 0) {
 			for ($i = 0; $i < $children; $i++) {
 				$age = $i+1;
 				$childrenAges .= "<ChildrenAges><ChildAge>{$age}</ChildAge></ChildrenAges>"; // Default age 2 for each child
 			}
 		}
+
+		$SearchSessionId = $CountryCode = $hotelCurrency = null;
 
 		// XML request string
 		$xmlString = "<HotelFindRequest>
@@ -173,19 +175,30 @@ class Hotel extends CI_Controller {
 			$data['hotelwiseroomcount'] = $hotelwiseroomcount;
 			$data['roomDetails'] = $roomDetails;
 
+			$SearchSessionId = $data['apiResponse']->SearchSessionId;
+			$CountryCode = $data['apiResponse']->CountryCode ?? 'NG' ;
+			$hotelCurrency = $data['apiResponse']->Currency ?? '&#8358;';
+
 		}
 		curl_close($ch);
 
 		// Parse defaults (from request, for form prefills)
 		$data['defaults'] = simplexml_load_string($xmlString);
 		$data['defaults']->hotelName = $hotelName;
-		$data['defaults']->currency = '&#8358;';
+		$data['defaults']->currency = $hotelCurrency;
 		$data['defaults']->guests = $guests;
 		$data['defaults']->arrival = $arrival;
 		$data['defaults']->departure = $departure;
 		$data['defaults']->rooms = $rooms;
 		$data['defaults']->adult = $adults;
 		$data['defaults']->children = $children;
+		$data['defaults']->searchSessionId = $SearchSessionId;
+		$data['defaults']->countryCode = $CountryCode;
+		$data['defaults']->hotelCurrency = $hotelCurrency;
+
+
+		$hotelDetails = $this->getHotelDetails($hotelId);
+		$data['hotelDetails'] = $hotelDetails->Hotels;
 
 
 		// Render view
@@ -198,6 +211,18 @@ class Hotel extends CI_Controller {
 		$checkIn   = $this->input->post('checkIn');
 		$checkOut  = $this->input->post('checkOut');
 		$guests    = $this->input->post('guests');
+
+		if (!is_null($checkIn) && !is_null($checkOut)) {
+			$this->session->set_userdata('searchBox', $searchBox);
+			$this->session->set_userdata('checkIn', $checkIn);
+			$this->session->set_userdata('checkOut', $checkOut);
+			$this->session->set_userdata('guests', $guests);
+		} else {
+			$searchBox = $this->session->userdata('searchBox');
+			$checkIn = $this->session->userdata('checkIn');
+			$checkOut = $this->session->userdata('checkOut');
+			$guests = $this->session->userdata('guests');
+		}
 
 		// Split guests string into parts
 		$guestsArr = explode(',', $guests);
@@ -367,5 +392,67 @@ class Hotel extends CI_Controller {
 
 		echo json_encode($result);
 	}
+
+	public function getHotelDetails($hotelId)
+	{
+		$xmlString = "<HotelDetailsRequest>
+    <Authentication>
+        <AgentCode>CD33604</AgentCode>
+        <UserName>GOFLY1</UserName>
+    </Authentication>
+    <Hotels>
+        <HotelId>{$hotelId}</HotelId>
+    </Hotels>
+</HotelDetailsRequest>";
+
+		// Ensure application/xml directory exists
+		$dir = APPPATH . 'xml/';
+		if (!is_dir($dir)) {
+			if (!mkdir($dir, 0775, true)) {
+				die('❌ Failed to create directories...');
+			}
+		}
+
+		// Save request to file
+		$filePath = $dir . 'request' . time() . '.xml';
+		file_put_contents($filePath, $xmlString);
+
+		// Send request via cURL
+		$url = API_URL . 'gethoteldetails';
+		$headers = array('x-api-key: 20f3fdffd79b56d060f941fa4f0a9bda');
+
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_POST, 1);
+		curl_setopt($ch, CURLOPT_POSTFIELDS, "XML=" . urlencode($xmlString));
+		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+		$result = curl_exec($ch);
+		if ($result === false) {
+			log_message('error', 'Curl error: ' . curl_error($ch));
+			$data['apiResponse'] = null;
+		} else {
+			// Try to decode response if gzipped
+			$decoded = @gzdecode($result);
+			$xmlResponse = $decoded !== false ? $decoded : $result;
+
+			// Save response XML (optional)
+			$responsePath = $dir . 'response' . time() . '.xml';
+			file_put_contents($responsePath, $xmlResponse);
+
+			// Parse API response
+			$data['apiResponse'] = simplexml_load_string($xmlResponse);
+			if ($data['apiResponse'] === false) {
+				log_message('error', 'Failed to parse API response XML.');
+			}
+
+		}
+		curl_close($ch);
+
+		return $data['apiResponse'];
+	}
+
 
 }

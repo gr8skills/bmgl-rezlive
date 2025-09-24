@@ -1,0 +1,9 @@
+<HotelDetailsRequest>
+    <Authentication>
+        <AgentCode>CD33604</AgentCode>
+        <UserName>GOFLY1</UserName>
+    </Authentication>
+    <Hotels>
+        <HotelId>729647</HotelId>
+    </Hotels>
+</HotelDetailsRequest>

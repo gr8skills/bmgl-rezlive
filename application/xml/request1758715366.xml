@@ -1,0 +1,29 @@
+<PreBookingRequest>
+    <Authentication>
+        <AgentCode>CD33604</AgentCode>
+        <UserName>GOFLY1</UserName>
+    </Authentication>
+    <PreBooking>
+        <SearchSessionId></SearchSessionId>
+        <ArrivalDate>24/09/2025</ArrivalDate>
+        <DepartureDate>29/09/2025</DepartureDate>
+        <GuestNationality></GuestNationality>
+        <CountryCode></CountryCode>
+        <City></City>
+        <HotelId></HotelId>
+        <Price>31.3242</Price>
+        <Currency>USD</Currency>
+        <RoomDetails>
+            <RoomDetail>
+                <Type>Standard Double Room, 1 Double Bed</Type>
+                <BoardBasis>Breakfast</BoardBasis>
+                <BookingKey>PccxEQAgDANARbkjKaGtAyTgAf87G78905V0eFHkj5o4m2UENGSMhiZSvWbiPg</BookingKey>
+                <Adults>1</Adults>
+                <Children>0</Children>
+                <ChildrenAges></ChildrenAges>
+                <TotalRooms>1</TotalRooms>
+                <TotalRate>31.3242000</TotalRate>
+            </RoomDetail>
+        </RoomDetails>
+    </PreBooking>
+</PreBookingRequest>
