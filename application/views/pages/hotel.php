@@ -1,3 +1,23 @@
+<?php
+/**
+ * Convert USD price to NGN (Nigerian Naira)
+ * @param float|string $price Price in USD
+ * @param string $sourceCurrency Source currency code (default USD)
+ * @return float Price in NGN
+ */
+function convertToNaira($price, $sourceCurrency = 'USD') {
+	$price = (float) $price;
+	// Only convert if source is USD
+	if (strtoupper($sourceCurrency) === 'USD') {
+		return $price * USD_TO_NGN_RATE;
+	}
+	return $price;
+}
+
+// Get API currency for conversion
+$apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 'USD';
+?>
+
 <section class="hotel-bookings">
 	<div class="container">
 		<div class="row g-3">
@@ -447,10 +467,9 @@
 							<p><i class="ri-user-fill"></i> <i class="ri-user-fill"></i></p>
 						</div>
 						<div class="col-lg-2">
-							<h5 class="fw-bold text-success"><?= $defaults->currency.' '. $detail->TotalRate ?></h5>
-							<p class="small">+ NGN7,500 taxes and
-								charges.
-							</p>
+							<h5 class="fw-bold text-success"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format(convertToNaira($detail->TotalRate, $apiCurrency), 2) ?></h5>
+							<?php $taxAmount = convertToNaira($detail->TotalRate, $apiCurrency) * 0.05; ?>
+							<p class="small">+ <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($taxAmount, 2) ?> taxes and charges</p>
 						</div>
 						<div class="col-lg">
 							<div class="row g-0">
@@ -516,7 +535,7 @@
 										<input type="hidden" name="hotelId" value="<?= $hotelDetails->HotelId ?>">
 										<input type="hidden" name="hotelName" value="<?= $hotelDetails->HotelName ?? '' ?>">
 										<input type="hidden" name="price" value="<?= $detail->TotalRate ?>">
-										<input type="hidden" name="currency" value="<?= $defaults->hotelCurrency ?>">
+										<input type="hidden" name="currency" value="<?= DISPLAY_CURRENCY ?>">
 										<input type="hidden" name="roomType" value="<?= $detail->Type ?>">
 										<input type="hidden" name="boardBasis" value="<?= $detail->BoardBasis ?>">
 										<input type="hidden" name="bookingKey" value="<?= $detail->BookingKey ?>">
@@ -646,15 +665,15 @@
 								<input type="hidden" name="cityCode" value="<?= $hotelDetails->Hotels->CityCode ?>">
 								<input type="hidden" name="hotelId" value="<?= $hotelDetails->Hotels->HotelId ?>">
 								<input type="hidden" name="hotelName" value="<?= $hotelDetails->Hotels->HotelName ?? '' ?>">
-								<input type="hidden" name="price" value="<?= $detail->TotalRate ?>">
-								<input type="hidden" name="currency" value="<?= $apiResponse->Currency ?>">
+								<input type="hidden" name="price" value="<?= convertToNaira($detail->TotalRate, $apiCurrency) ?>">
+								<input type="hidden" name="currency" value="<?= DISPLAY_CURRENCY ?>">
 								<input type="hidden" name="roomType" value="<?= $detail->Type ?>">
 								<input type="hidden" name="boardBasis" value="<?= $detail->BoardBasis ?>">
 								<input type="hidden" name="bookingKey" value="<?= $detail->BookingKey ?>">
 								<input type="hidden" name="adults" value="<?= $detail->Adults ?? 1 ?>">
 								<input type="hidden" name="children" value="<?= $detail->Children ?? 0 ?>">
 								<input type="hidden" name="totalRooms" value="<?= $detail->TotalRooms ?? 1 ?>">
-								<input type="hidden" name="totalRate" value="<?= $detail->TotalRate ?>">
+								<input type="hidden" name="totalRate" value="<?= convertToNaira($detail->TotalRate, $apiCurrency) ?>">
 								<button type="submit" class="btn btn-primary px-5 rounded-0 fw-bold">Reserve</button>
 							</form>
 
@@ -664,9 +683,9 @@
 							</ul>
 						</div>
 						<div class="col-md-12 mt-3">
-							<h4 class="text-success"><?= $defaults->currency.' '.$detail->TotalRate ?></h4>
-							<p class="small">+ NGN7,500 taxes and charges.
-							</p>
+							<h4 class="text-success"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format(convertToNaira($detail->TotalRate, $apiCurrency), 2) ?></h4>
+							<?php $taxAmountMobile = convertToNaira($detail->TotalRate, $apiCurrency) * 0.05; ?>
+							<p class="small">+ <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($taxAmountMobile, 2) ?> taxes and charges</p>
 						</div>
 					</div>
 				</div>

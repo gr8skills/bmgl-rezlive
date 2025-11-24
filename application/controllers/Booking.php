@@ -15,15 +15,39 @@ class Booking extends CI_Controller
 	 */
 	public function index()
 	{
+		// PRG Pattern: If POST request, save to session and redirect to GET
+		if ($this->input->post('searchSessionId')) {
+			$this->booking_model->save_to_session([
+				'searchSessionId' => $this->input->post('searchSessionId'),
+				'arrivalDate' => $this->input->post('arrivalDate'),
+				'departureDate' => $this->input->post('departureDate'),
+				'countryCode' => $this->input->post('countryCode'),
+				'cityCode' => $this->input->post('cityCode'),
+				'hotelId' => $this->input->post('hotelId'),
+				'hotelName' => $this->input->post('hotelName'),
+				'totalRate' => $this->input->post('totalRate'),
+				'currency' => $this->input->post('currency'),
+				'roomType' => $this->input->post('roomType'),
+				'boardBasis' => $this->input->post('boardBasis'),
+				'bookingKey' => $this->input->post('bookingKey'),
+				'adults' => $this->input->post('adults'),
+				'children' => $this->input->post('children'),
+				'totalRooms' => $this->input->post('totalRooms'),
+			]);
+			// Redirect to same page as GET request
+			redirect('booking/index');
+			return;
+		}
+
 		set_time_limit(0);
 
-		// Get booking data from POST or session using model
-		$bookingData = $this->booking_model->get_booking_data();
+		// Get booking data from session (after redirect)
+		$bookingData = $this->booking_model->load_from_session();
 
-		// Validate required data
-		if (empty($bookingData['searchSessionId']) && empty($this->input->post('searchSessionId'))) {
-			// Try to get from session if not in POST
-			$bookingData = $this->booking_model->load_from_session();
+		// Validate required data - redirect to home if no session data
+		if (empty($bookingData['searchSessionId'])) {
+			redirect('home');
+			return;
 		}
 
 		// Extract booking data

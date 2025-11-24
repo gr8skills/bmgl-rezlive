@@ -1,3 +1,24 @@
+<?php
+/**
+ * Convert USD price to NGN (Nigerian Naira)
+ * @param float|string $price Price in USD
+ * @param string $sourceCurrency Source currency code (default USD)
+ * @return float Price in NGN
+ */
+if (!function_exists('convertToNaira')) {
+	function convertToNaira($price, $sourceCurrency = 'USD') {
+		$price = (float) $price;
+		if (strtoupper($sourceCurrency) === 'USD') {
+			return $price * USD_TO_NGN_RATE;
+		}
+		return $price;
+	}
+}
+
+// Get API currency for conversion
+$apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 'USD';
+?>
+
 <section class="hotel-bookings">
 	<div class="container">
 		<div class="row mb-5 g-3">
@@ -1151,8 +1172,6 @@
 					$nights = ($arrivalDt && $departureDt) ? $arrivalDt->diff($departureDt)->days : 1;
 					$nightText = $nights > 1 ? 'Nights' : 'Night';
 
-					// Get currency from API response
-					$currency = isset($apiResponse->Currency) ? $apiResponse->Currency : '&#8358;';
 					?>
 					<?php foreach ($hotels as $hotel): ?>
 						<?php if (isset($hotel->Hotelwiseroomcount) && $hotel->Hotelwiseroomcount > 0): ?>
@@ -1164,8 +1183,9 @@
 								$roomDetail = is_array($roomDetails) ? $roomDetails[0] : $roomDetails;
 							}
 
-							// Calculate estimated taxes (5% of price)
-							$hotelPrice = isset($hotel->Price) ? (float)$hotel->Price : 0;
+							// Calculate estimated taxes (5% of price) - convert to Naira
+							$hotelPriceUsd = isset($hotel->Price) ? (float)$hotel->Price : 0;
+							$hotelPrice = convertToNaira($hotelPriceUsd, $apiCurrency);
 							$taxAmount = $hotelPrice * 0.05;
 
 							// Get rating label
@@ -1252,13 +1272,13 @@
 														<div class="col-lg-5 text-lg-end">
 															<p><?= $nights ?> <?= $nightText ?>, <?= $displayAdults ?> Adult<?= $displayAdults > 1 ? 's' : '' ?></p>
 															<h5 class="text-success fw-bold">
-																<?= $currency ?> <?= number_format($hotelPrice, 2) ?>
+																<?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($hotelPrice, 2) ?>
 															</h5>
-															<p class="small">+ <?= $currency ?> <?= number_format($taxAmount, 2) ?> taxes and charges</p>
+															<p class="small">+ <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($taxAmount, 2) ?> taxes and charges</p>
 															<form action="<?= site_url('hotel/index') ?>" method="post">
 																<input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>"
 																	   value="<?= $this->security->get_csrf_hash(); ?>" />
-																<input type="hidden" name="hotelId" value="<?= isset($hotel->HotelCode) ? $hotel->HotelCode : '' ?>">
+																<input type="hidden" name="hotelId" value="<?= isset($hotel->Id) ? $hotel->Id : '' ?>">
 																<input type="hidden" name="hotelName" value="<?= isset($hotel->Name) ? htmlspecialchars($hotel->Name) : '' ?>">
 																<input type="hidden" name="arrival" value="<?= $arrivalFormatted ?>">
 																<input type="hidden" name="departure" value="<?= $departureFormatted ?>">

@@ -15,36 +15,76 @@ class Hotel extends CI_Controller {
 	 */
 	public function index()
 	{
-		set_time_limit(0);
-
-		// Get hotel data from POST or session
-		$hotelId = $this->input->post('hotelId') ?: $this->session->userdata('hotelId');
-		$hotelName = $this->input->post('hotelName') ?: $this->session->userdata('hotelName');
-		$arrival = $this->input->post('arrival') ?: $this->session->userdata('arrival');
-		$departure = $this->input->post('departure') ?: $this->session->userdata('departure');
-		$guests = $this->input->post('guestData') ?: $this->session->userdata('guestData') ?: '1,0,1';
-
-		// Save to session
+		// PRG Pattern: If POST request, save to session and redirect to GET
 		if ($this->input->post('hotelId')) {
 			$this->session->set_userdata([
-				'hotelId' => $hotelId,
-				'hotelName' => $hotelName,
-				'arrival' => $arrival,
-				'departure' => $departure,
-				'guestData' => $guests
+				'hotelId' => $this->input->post('hotelId'),
+				'hotelName' => $this->input->post('hotelName'),
+				'arrival' => $this->input->post('arrival'),
+				'departure' => $this->input->post('departure'),
+				'guestData' => $this->input->post('guestData') ?: '1,0,1'
 			]);
+			// Redirect to same page as GET request
+			redirect('hotel/index');
+			return;
+		}
+
+		set_time_limit(0);
+
+		// Get hotel data from session (after redirect)
+		$hotelId = $this->session->userdata('hotelId');
+		$hotelName = $this->session->userdata('hotelName');
+		$arrival = $this->session->userdata('arrival');
+		$departure = $this->session->userdata('departure');
+		$guests = $this->session->userdata('guestData') ?: '1,0,1';
+
+		// Validate required data
+		if (empty($hotelId)) {
+			redirect('home');
+			return;
 		}
 
 		$data['title'] = ($hotelName ?? 'Hotel') . " | MakeIFly";
 
-		// Format dates
-		$now = Carbon::createFromFormat('Y-m-d', $arrival)->format('d/m/Y');
-		$afterOneMonth = Carbon::createFromFormat('Y-m-d', $departure)->format('d/m/Y');
+		// Format dates - handle both Y-m-d and d/m/Y formats
+		$arrivalCarbon = Carbon::createFromFormat('Y-m-d', $arrival);
+		if ($arrivalCarbon === false) {
+			$arrivalCarbon = Carbon::createFromFormat('d/m/Y', $arrival);
+		}
+		if ($arrivalCarbon === false) {
+			$arrivalCarbon = Carbon::now();
+		}
 
-		// Get city info
-		$city = $this->city_model->get_by_code($hotelId);
-		$cityCode = $city ? $city->city_code : DEFAULT_CITY_CODE;
-		$countryCode = $city ? $city->country_code : DEFAULT_COUNTRY_CODE;
+		$departureCarbon = Carbon::createFromFormat('Y-m-d', $departure);
+		if ($departureCarbon === false) {
+			$departureCarbon = Carbon::createFromFormat('d/m/Y', $departure);
+		}
+		if ($departureCarbon === false) {
+			$departureCarbon = Carbon::now()->addDay();
+		}
+
+		$now = $arrivalCarbon->format('d/m/Y');
+		$afterOneMonth = $departureCarbon->format('d/m/Y');
+
+		// Get hotel details first to find city/country info
+		$hotelDetails = $this->rezlive_api->getHotelDetails($hotelId);
+		$cityCode = DEFAULT_CITY_CODE;
+		$countryCode = DEFAULT_COUNTRY_CODE;
+
+		if ($hotelDetails && isset($hotelDetails->Hotels)) {
+			$hotelInfo = $hotelDetails->Hotels;
+			// Try to get city code from hotel details
+			if (isset($hotelInfo->City)) {
+				$cityName = (string)$hotelInfo->City;
+				$countryName = isset($hotelInfo->Country) ? (string)$hotelInfo->Country : '';
+				// Look up city code from city name
+				$cityRecord = $this->city_model->get_by_name_and_country($cityName, $countryName);
+				if ($cityRecord) {
+					$cityCode = $cityRecord->city_code;
+					$countryCode = $cityRecord->country_code;
+				}
+			}
+		}
 
 		// Parse guests
 		$guestsArr = explode(',', $guests);
@@ -83,18 +123,34 @@ class Hotel extends CI_Controller {
 
 		$SearchSessionId = $hotelCurrency = null;
 
-		if ($apiResponse) {
-			$data['hotelCount'] = isset($apiResponse->Hotels->Hotel) ? count($apiResponse->Hotels->Hotel) : 0;
-			$data['hotels'] = $apiResponse->Hotels->Hotel ?? [];
+		if ($apiResponse && isset($apiResponse->Hotels->Hotel)) {
+			// Handle both single hotel (object) and multiple hotels (array)
+			$hotels = $apiResponse->Hotels->Hotel;
+			if (!is_array($hotels)) {
+				$hotels = [$hotels];
+			}
+
+			$data['hotelCount'] = count($hotels);
+			$data['hotels'] = $hotels;
 
 			if ($data['hotelCount'] > 0) {
-				$firstHotel = $data['hotels'][0];
-				$data['hotelwiseroomcount'] = $firstHotel->Hotelwiseroomcount ?? 0;
-				$data['roomDetails'] = $firstHotel->RoomDetails->RoomDetail ?? [];
+				$firstHotel = $hotels[0];
+				$data['hotelwiseroomcount'] = isset($firstHotel->Hotelwiseroomcount) ? (int)$firstHotel->Hotelwiseroomcount : 0;
+
+				// Handle room details - collect all RoomDetail elements into array
+				$data['roomDetails'] = [];
+				if (isset($firstHotel->RoomDetails) && isset($firstHotel->RoomDetails->RoomDetail)) {
+					foreach ($firstHotel->RoomDetails->RoomDetail as $room) {
+						$data['roomDetails'][] = $room;
+					}
+				}
 			}
 
 			$SearchSessionId = $apiResponse->SearchSessionId ?? null;
 			$hotelCurrency = $apiResponse->Currency ?? '&#8358;';
+		} else {
+			// Log for debugging
+			log_message('debug', 'Hotel search by ID returned no results for hotel: ' . $hotelId);
 		}
 
 		// Defaults for view
@@ -118,8 +174,7 @@ class Hotel extends CI_Controller {
 			'hotelCurrency' => $hotelCurrency,
 		];
 
-		// Get hotel details (cached)
-		$hotelDetails = $this->rezlive_api->getHotelDetails($hotelId);
+		// Use hotel details already fetched (cached)
 		$data['hotelDetails'] = $hotelDetails ? $hotelDetails->Hotels : null;
 
 		$data['content'] = $this->load->view('pages/hotel', $data, TRUE);

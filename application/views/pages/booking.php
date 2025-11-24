@@ -132,10 +132,10 @@
 						<div class="row mt-4">
 							<div class="col-6">
 								<p class="fw-bold mb-n1">Price:</p>
-								<p class="small">Hotel’s Currency: <?= $apiResponse?$apiResponse->currency:$default->currency.' '.number_format($apiResponse?$apiResponse->totalRate : $default->totalRate, 2) ?></p>
+								<p class="small">Hotel's Currency: <?= $apiResponse ? (string)$apiResponse->currency : $default->currency ?> <?= number_format($totalRate, 2) ?></p>
 							</div>
 							<div class="col-6 text-lg-end">
-								<p class="text-success fw-bold"><?= $currency.' '.number_format($apiResponse?$apiResponse->totalRate : $default->totalRate, 2) ?></p>
+								<p class="text-success fw-bold"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($totalRate, 2) ?></p>
 							</div>
 						</div>
 
@@ -145,8 +145,8 @@
 								<p class="fw-bold">City tax</p>
 							</div>
 							<div class="col-6 text-lg-end">
-								<p class="text-success fw-bold"><?= $currency.' '.number_format($tax, 2) ?></p>
-								<p class="text-success fw-bold"><?= $currency.' '.number_format($cityTax, 2) ?></p>
+								<p class="text-success fw-bold"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($tax, 2) ?></p>
+								<p class="text-success fw-bold"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($cityTax, 2) ?></p>
 							</div>
 						</div>
 						<hr />
@@ -156,7 +156,7 @@
 								<h5 class="fw-bold my-auto">Total</h5>
 							</div>
 							<div class="col-6 text-lg-end">
-								<h5 class="text-success fw-bold my-auto"><?= $currency.' '.number_format($total, 2) ?></h5>
+								<h5 class="text-success fw-bold my-auto"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($total, 2) ?></h5>
 							</div>
 						</div>
 						<hr />
@@ -173,8 +173,8 @@
 
 						<div class="col-lg-12">
 							<h6 class="fw-bold">Your payment schedule</h6>
-							<p class="small">Before check-in you’ll pay <span
-									class="text-success fw-bold"><?= $currency.' '.number_format($total, 2) ?></span></p>
+							<p class="small">Before check-in you'll pay <span
+									class="text-success fw-bold"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($total, 2) ?></span></p>
 						</div>
 					</div>
 				</div>
@@ -435,7 +435,7 @@
 							<input type="hidden" name="hotelName" value="<?= htmlspecialchars($default->hotelName) ?>">
 							<input type="hidden" name="totalAmount" value="<?= $total ?>">
 							<input type="hidden" name="currency" value="<?= htmlspecialchars($default->currency) ?>">
-							<button type="submit" class="btn btn-warning fw-bold btn-lg px-5">Pay <?= $currency.' '.number_format($total, 2) ?> Now</button>
+							<button type="submit" class="btn btn-warning fw-bold btn-lg px-5">Pay <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($total, 2) ?> Now</button>
 						</form>
 					</div>
 				</div>

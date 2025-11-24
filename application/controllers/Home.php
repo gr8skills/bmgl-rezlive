@@ -38,9 +38,14 @@ class Home extends CI_Controller {
 		$data['hotelCount'] = 0;
 		$data['hotels'] = [];
 
-		if ($apiResponse) {
-			$data['hotelCount'] = isset($apiResponse->Hotels->Hotel) ? count($apiResponse->Hotels->Hotel) : 0;
-			$data['hotels'] = $apiResponse->Hotels->Hotel ?? [];
+		if ($apiResponse && isset($apiResponse->Hotels->Hotel)) {
+			// Handle both single hotel (object) and multiple hotels (array)
+			$hotels = $apiResponse->Hotels->Hotel;
+			if (!is_array($hotels)) {
+				$hotels = [$hotels];
+			}
+			$data['hotelCount'] = count($hotels);
+			$data['hotels'] = $hotels;
 		}
 
 		// Defaults for form prefills
@@ -127,9 +132,14 @@ class Home extends CI_Controller {
 		$data['hotelCount'] = 0;
 		$data['hotels'] = [];
 
-		if ($apiResponse) {
-			$data['hotelCount'] = isset($apiResponse->Hotels->Hotel) ? count($apiResponse->Hotels->Hotel) : 0;
-			$data['hotels'] = $apiResponse->Hotels->Hotel ?? [];
+		if ($apiResponse && isset($apiResponse->Hotels->Hotel)) {
+			// Handle both single hotel (object) and multiple hotels (array)
+			$hotels = $apiResponse->Hotels->Hotel;
+			if (!is_array($hotels)) {
+				$hotels = [$hotels];
+			}
+			$data['hotelCount'] = count($hotels);
+			$data['hotels'] = $hotels;
 		}
 
 		// Defaults for form

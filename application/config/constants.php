@@ -91,3 +91,8 @@ define('AGENT_CODE', 'CD33604');
 define('AGENT_USERNAME', 'GOFLY1');
 define('DEFAULT_COUNTRY_CODE', 'NG');
 define('DEFAULT_CITY_CODE', '31606'); // Lagos
+
+// Currency conversion
+define('USD_TO_NGN_RATE', 1600); // USD to Nigerian Naira exchange rate
+define('DISPLAY_CURRENCY', 'NGN');
+define('DISPLAY_CURRENCY_SYMBOL', '₦');
