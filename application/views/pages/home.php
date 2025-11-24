@@ -1110,7 +1110,7 @@
 				<div class="d-flex justify-content-between" data-aos="fade-up" data-aos-duration="1000">
 					<div class="col-lg-12 col-7">
 						<h1 class="big-heading"><?= $defaults->location ?></h1>
-						<h5 class="fw-bold"><?= $apiResponse['count'] ?> Hotels found</h5>
+						<h5 class="fw-bold"><?= $hotelCount ?> Hotels found</h5>
 					</div>
 					<div class="col-5 text-end d-lg-none">
 						<a href="" class="btn btn-primary btn-lg"><i class="ri-sound-module-line"></i> Filter</a>
@@ -1119,7 +1119,7 @@
 				<div class="d-flex justify-content-between align-items-center" data-aos="fade-up"
 					 data-aos-duration="1000">
 					<div class="col-lg-9 me-auto">
-						<p class="small text-muted me-auto">1 - 19 Showing</p>
+						<p class="small text-muted me-auto">1 - <?= $hotelCount ?> of <?= $hotelCount ?> Hotels</p>
 					</div>
 
 					<div class="col-lg-3">
@@ -1127,9 +1127,9 @@
 							<div class="mb-3">
 								<select class="form-select" aria-label="Default select example">
 									<option selected>Sort by: Our top picks</option>
-									<option value="1">Choose</option>
-									<option value="2">Choose</option>
-									<option value="3">Choose</option>
+									<option value="price_asc">Price: Low to High</option>
+									<option value="price_desc">Price: High to Low</option>
+									<option value="rating">Rating</option>
 								</select>
 							</div>
 						</form>
@@ -1138,72 +1138,134 @@
 
 
 				<?php if (!empty($hotels)): ?>
+					<?php
+					// Parse guest info for display
+					$guestsArr = explode(',', $defaults->guests ?? '1,0,1');
+					$displayAdults = isset($guestsArr[0]) ? (int)$guestsArr[0] : 1;
+					$displayChildren = isset($guestsArr[1]) ? (int)$guestsArr[1] : 0;
+					$displayRooms = isset($guestsArr[2]) ? (int)$guestsArr[2] : 1;
+
+					// Calculate number of nights
+					$arrivalDt = DateTime::createFromFormat('Y-m-d', $arrivalFormatted);
+					$departureDt = DateTime::createFromFormat('Y-m-d', $departureFormatted);
+					$nights = ($arrivalDt && $departureDt) ? $arrivalDt->diff($departureDt)->days : 1;
+					$nightText = $nights > 1 ? 'Nights' : 'Night';
+
+					// Get currency from API response
+					$currency = isset($apiResponse->Currency) ? $apiResponse->Currency : '&#8358;';
+					?>
 					<?php foreach ($hotels as $hotel): ?>
-						<?php if ($hotel->Hotelwiseroomcount > 0) ?>
-							<?php foreach ($hotel->RoomDetails as $RoomDetail); ?>
-								<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
-							<div class="card-body">
-								<div class="row g-3">
-									<div class="col-lg-4">
-										<img src="<?= $hotel->ThumbImages ?? base_url('assets/images/hotel/hotel-1.png') ?>"
-											 width="100%" class="img-fluid" alt="">
-									</div>
-									<div class="col-lg-8">
-										<div class="row g-3">
-											<div class="col-lg-12">
-												<div class="row">
-													<div class="col-lg-8 col-6">
-														<h5 class="fw-bold mb-n0">
-															<?= $hotel->Name ?? 'Unnamed Hotel' ?>
-														</h5>
-														<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
-													</div>
-													<div class="col-lg-4 col-6 d-flex">
-														<div class="col-8">
-															<h6 class="fw-bold">Very Good</h6>
-															<p class="small"><?php echo mt_rand(2550, 4980); ?> reviews</p>
-														</div>
-														<div class="col-4">
-                                            				<span class="badge bg-warning p-3"><?= $hotel->Rating ?? 'N/A' ?></span>
-														</div>
-													</div>
-												</div>
+						<?php if (isset($hotel->Hotelwiseroomcount) && $hotel->Hotelwiseroomcount > 0): ?>
+							<?php
+							// Get first room detail for display
+							$roomDetail = null;
+							if (isset($hotel->RoomDetails->RoomDetail)) {
+								$roomDetails = $hotel->RoomDetails->RoomDetail;
+								$roomDetail = is_array($roomDetails) ? $roomDetails[0] : $roomDetails;
+							}
 
-												<div class="row">
-													<div class="mt-2">
-														<a href="hotel-2.html"
-														   class="me-1 text-decoration-underline"><?= $defaults->location ?></a> &bull; <a
-															href="hotel-2.html" class="mx-1 text-decoration-underline">Show
-															on
-															map</a>
-														&bull;
-														<span class="small mx-1"><?php echo mt_rand(1,5) ?>km from center</span>
-													</div>
-												</div>
+							// Calculate estimated taxes (5% of price)
+							$hotelPrice = isset($hotel->Price) ? (float)$hotel->Price : 0;
+							$taxAmount = $hotelPrice * 0.05;
 
-												<div class="row g-3 mt-2 align-items-end">
-													<div class="col-lg-7 lh-1">
-														<p class=""><?= explode(',',$RoomDetail->RoomDetail->Type )[0] ?? 'Standard Room' ?></p>
-														<p><?= explode(',',$RoomDetail->RoomDetail->Type )[1] ?? '' ?></p>
-														<p class="text-success fw-bold"><?= $RoomDetail->RoomDetail->BoardBasis ?? '' ?></p>
-														<p class="text-success fw-bold"><?= $RoomDetail->RoomDetail->RoomDescription ?? '' ?></p>
+							// Get rating label
+							$rating = isset($hotel->Rating) ? (float)$hotel->Rating : 0;
+							if ($rating >= 9) {
+								$ratingLabel = 'Exceptional';
+							} elseif ($rating >= 8) {
+								$ratingLabel = 'Excellent';
+							} elseif ($rating >= 7) {
+								$ratingLabel = 'Very Good';
+							} elseif ($rating >= 6) {
+								$ratingLabel = 'Good';
+							} else {
+								$ratingLabel = 'Pleasant';
+							}
+							?>
+							<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
+								<div class="card-body">
+									<div class="row g-3">
+										<div class="col-lg-4">
+											<img src="<?= isset($hotel->ThumbImages) ? $hotel->ThumbImages : base_url('assets/images/hotel/hotel-1.png') ?>"
+												 width="100%" class="img-fluid" alt="<?= isset($hotel->Name) ? htmlspecialchars($hotel->Name) : 'Hotel' ?>">
+										</div>
+										<div class="col-lg-8">
+											<div class="row g-3">
+												<div class="col-lg-12">
+													<div class="row">
+														<div class="col-lg-8 col-6">
+															<h5 class="fw-bold mb-n0">
+																<?= isset($hotel->Name) ? htmlspecialchars($hotel->Name) : 'Hotel' ?>
+															</h5>
+															<?php if (isset($hotel->StarRating) && $hotel->StarRating > 0): ?>
+																<?php for ($i = 0; $i < (int)$hotel->StarRating; $i++): ?>
+																	<i class="ri-star-fill text-warning"></i>
+																<?php endfor; ?>
+															<?php else: ?>
+																<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
+															<?php endif; ?>
+														</div>
+														<div class="col-lg-4 col-6 d-flex">
+															<div class="col-8">
+																<h6 class="fw-bold"><?= $ratingLabel ?></h6>
+																<p class="small"><?= isset($hotel->ReviewCount) ? number_format($hotel->ReviewCount) : '' ?> reviews</p>
+															</div>
+															<div class="col-4">
+																<span class="badge bg-warning p-3"><?= isset($hotel->Rating) ? $hotel->Rating : 'N/A' ?></span>
+															</div>
+														</div>
 													</div>
-													<div class="col-lg-5 text-lg-end">
-														<p>1 Night, 1 Adult</p>
-														<h5 class="text-success fw-bold">
-															<?= $apiResponse->Currency.' '.$hotel->Price ?? 'N/A' ?>
-														</h5>
-														<p class="small">+ NGN7,500 taxes and charges</p>
-														<form action="<?php echo site_url('hotel/index')?>" method="post">
-															<input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>"
-																   value="<?= $this->security->get_csrf_hash(); ?>" />
-															<input type="hidden" name="hotelId" value="<?= $hotel->HotelCode ?? '729647' ?>">
-															<input type="hidden" name="hotelName" value="<?= $hotel->Name ?? '' ?>">
-															<input type="hidden" name="arrival" value="<?= $arrivalFormatted ?? '' ?>">
-															<input type="hidden" name="departure" value="<?= $departureFormatted ?? '' ?>">
-															<input type="hidden" name="guestData" value="<?= $defaults->guests ?? '1,0,1' ?>">
-															<button type="submit" class="btn btn-primary">Book now</button>
-														</form>
+
+													<div class="row">
+														<div class="mt-2">
+															<a href="#" class="me-1 text-decoration-underline"><?= htmlspecialchars($defaults->location) ?></a> &bull;
+															<?php if (isset($hotel->Latitude) && isset($hotel->Longitude)): ?>
+																<a href="https://www.google.com/maps/@<?= $hotel->Latitude ?>,<?= $hotel->Longitude ?>,15z" class="mx-1 text-decoration-underline" target="_blank">Show on map</a>
+															<?php else: ?>
+																<span class="mx-1">Show on map</span>
+															<?php endif; ?>
+															&bull;
+															<span class="small mx-1"><?= isset($hotel->DistanceFromCenter) ? $hotel->DistanceFromCenter : '' ?> from center</span>
+														</div>
+													</div>
+
+													<div class="row g-3 mt-2 align-items-end">
+														<div class="col-lg-7 lh-1">
+															<?php if ($roomDetail): ?>
+																<?php
+																$roomTypeParts = isset($roomDetail->Type) ? explode(',', $roomDetail->Type) : ['Standard Room'];
+																?>
+																<p class=""><?= htmlspecialchars($roomTypeParts[0]) ?></p>
+																<?php if (isset($roomTypeParts[1])): ?>
+																	<p><?= htmlspecialchars($roomTypeParts[1]) ?></p>
+																<?php endif; ?>
+																<?php if (isset($roomDetail->BoardBasis)): ?>
+																	<p class="text-success fw-bold"><?= htmlspecialchars($roomDetail->BoardBasis) ?></p>
+																<?php endif; ?>
+																<?php if (isset($roomDetail->RoomDescription)): ?>
+																	<p class="text-success fw-bold"><?= htmlspecialchars($roomDetail->RoomDescription) ?></p>
+																<?php endif; ?>
+															<?php else: ?>
+																<p>Standard Room</p>
+															<?php endif; ?>
+														</div>
+														<div class="col-lg-5 text-lg-end">
+															<p><?= $nights ?> <?= $nightText ?>, <?= $displayAdults ?> Adult<?= $displayAdults > 1 ? 's' : '' ?></p>
+															<h5 class="text-success fw-bold">
+																<?= $currency ?> <?= number_format($hotelPrice, 2) ?>
+															</h5>
+															<p class="small">+ <?= $currency ?> <?= number_format($taxAmount, 2) ?> taxes and charges</p>
+															<form action="<?= site_url('hotel/index') ?>" method="post">
+																<input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>"
+																	   value="<?= $this->security->get_csrf_hash(); ?>" />
+																<input type="hidden" name="hotelId" value="<?= isset($hotel->HotelCode) ? $hotel->HotelCode : '' ?>">
+																<input type="hidden" name="hotelName" value="<?= isset($hotel->Name) ? htmlspecialchars($hotel->Name) : '' ?>">
+																<input type="hidden" name="arrival" value="<?= $arrivalFormatted ?>">
+																<input type="hidden" name="departure" value="<?= $departureFormatted ?>">
+																<input type="hidden" name="guestData" value="<?= $defaults->guests ?>">
+																<button type="submit" class="btn btn-primary">Book now</button>
+															</form>
+														</div>
 													</div>
 												</div>
 											</div>
@@ -1211,598 +1273,12 @@
 									</div>
 								</div>
 							</div>
-						</div>
-							<?php endforeach; ?>
+						<?php endif; ?>
+					<?php endforeach; ?>
 
 				<?php else: ?>
-					<p>No hotels found.</p>
+					<p class="text-center mt-4">No hotels found. Try adjusting your search criteria.</p>
 				<?php endif; ?>
-
-
-				<!--  -->
-				<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
-					<div class="card-body">
-						<div class="row g-3">
-							<div class="col-lg-4">
-								<img src="<?= base_url('assets/images/hotel/hotel-3.png') ?>" width="100%" height="auto"
-									 class="img-fluid" alt="">
-							</div>
-							<div class="col-lg-8">
-								<div class="row g-3">
-									<div class="col-lg-12">
-										<div class="row">
-											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0">Jenos Hotel</h5>
-												<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
-											</div>
-
-											<div class="col-lg-4 col-6 d-flex">
-												<div class="col-8">
-													<h6 class="fw-bold">Very Good</h6>
-													<p class="small">4,325 reviews</p>
-												</div>
-												<div class="col-4">
-													<span class="badge bg-warning p-3">8.7</span>
-												</div>
-											</div>
-										</div>
-
-										<div class="row">
-											<div class="mt-2">
-												<a href="hotel-2.html"
-												   class="me-1 text-decoration-underline">Accra</a> &bull; <a
-													href="hotel-2.html" class="mx-1 text-decoration-underline">Show
-													on
-													map</a>
-												&bull;
-												<span class="small mx-1">1km from center</span>
-											</div>
-										</div>
-
-										<div class="row g-3 mt-2 align-items-end">
-											<div class="col-lg-7 lh-1">
-												<p class="">Deluxe King Room</p>
-												<p>1 King bed</p>
-												<p class="text-success fw-bold">Breakfast included</p>
-												<p class="text-success fw-bold">Free cancellation. No payment
-													needed</p>
-											</div>
-											<div class="col-lg-5 text-lg-end">
-												<p>1 Night, 1 Adult</p>
-												<h5 class="text-success fw-bold">NGN43,000</h5>
-												<p class="small">+ NGN7,500 taxes and charges</p>
-												<a href="hotel-2.html" class="btn btn-primary">
-													Book now
-												</a>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<!--  -->
-
-				<!--  -->
-				<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
-					<div class="card-body">
-						<div class="row g-3">
-							<div class="col-lg-4">
-								<img src="<?= base_url('assets/images/hotel/hotel-4.png') ?>" width="100%" height="auto"
-									 class="img-fluid" alt="">
-							</div>
-							<div class="col-lg-8">
-								<div class="row g-3">
-									<div class="col-lg-12">
-										<div class="row">
-											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0">Jenos Hotel</h5>
-												<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
-											</div>
-
-											<div class="col-lg-4 col-6 d-flex">
-												<div class="col-8">
-													<h6 class="fw-bold">Very Good</h6>
-													<p class="small">4,325 reviews</p>
-												</div>
-												<div class="col-4">
-													<span class="badge bg-warning p-3">8.7</span>
-												</div>
-											</div>
-										</div>
-
-										<div class="row">
-											<div class="mt-2">
-												<a href="hotel-2.html"
-												   class="me-1 text-decoration-underline">Accra</a> &bull; <a
-													href="hotel-2.html" class="mx-1 text-decoration-underline">Show
-													on
-													map</a>
-												&bull;
-												<span class="small mx-1">1km from center</span>
-											</div>
-										</div>
-
-										<div class="row g-3 mt-2 align-items-end">
-											<div class="col-lg-7 lh-1">
-												<p class="">Deluxe King Room</p>
-												<p>1 King bed</p>
-												<p class="text-success fw-bold">Breakfast included</p>
-												<p class="text-success fw-bold">Free cancellation. No payment
-													needed</p>
-											</div>
-											<div class="col-lg-5 text-lg-end">
-												<p>1 Night, 1 Adult</p>
-												<h5 class="text-success fw-bold">NGN43,000</h5>
-												<p class="small">+ NGN7,500 taxes and charges</p>
-												<a href="hotel-2.html" class="btn btn-primary">
-													Book now
-												</a>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<!--  -->
-
-				<!--  -->
-				<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
-					<div class="card-body">
-						<div class="row g-3">
-							<div class="col-lg-4">
-								<img src="<?= base_url('assets/images/hotel/hotel-1.png') ?>" width="100%" height="auto"
-									 class="img-fluid" alt="">
-							</div>
-							<div class="col-lg-8">
-								<div class="row g-3">
-									<div class="col-lg-12">
-										<div class="row">
-											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0">Jenos Hotel</h5>
-												<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
-											</div>
-
-											<div class="col-lg-4 col-6 d-flex">
-												<div class="col-8">
-													<h6 class="fw-bold">Very Good</h6>
-													<p class="small">4,325 reviews</p>
-												</div>
-												<div class="col-4">
-													<span class="badge bg-warning p-3">8.7</span>
-												</div>
-											</div>
-										</div>
-
-										<div class="row">
-											<div class="mt-2">
-												<a href="hotel-2.html"
-												   class="me-1 text-decoration-underline">Accra</a> &bull; <a
-													href="hotel-2.html" class="mx-1 text-decoration-underline">Show
-													on
-													map</a>
-												&bull;
-												<span class="small mx-1">1km from center</span>
-											</div>
-										</div>
-
-										<div class="row g-3 mt-2 align-items-end">
-											<div class="col-lg-7 lh-1">
-												<p class="">Deluxe King Room</p>
-												<p>1 King bed</p>
-												<p class="text-success fw-bold">Breakfast included</p>
-												<p class="text-success fw-bold">Free cancellation. No payment
-													needed</p>
-											</div>
-											<div class="col-lg-5 text-lg-end">
-												<p>1 Night, 1 Adult</p>
-												<h5 class="text-success fw-bold">NGN43,000</h5>
-												<p class="small">+ NGN7,500 taxes and charges</p>
-												<a href="hotel-2.html" class="btn btn-primary">
-													Book now
-												</a>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<!--  -->
-
-				<!--  -->
-				<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
-					<div class="card-body">
-						<div class="row g-3">
-							<div class="col-lg-4">
-								<img src="<?= base_url('assets/images/hotel/hotel-2.png') ?>" width="100%" height="auto"
-									 class="img-fluid" alt="">
-							</div>
-							<div class="col-lg-8">
-								<div class="row g-3">
-									<div class="col-lg-12">
-										<div class="row">
-											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0">Jenos Hotel</h5>
-												<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
-											</div>
-
-											<div class="col-lg-4 col-6 d-flex">
-												<div class="col-8">
-													<h6 class="fw-bold">Very Good</h6>
-													<p class="small">4,325 reviews</p>
-												</div>
-												<div class="col-4">
-													<span class="badge bg-warning p-3">8.7</span>
-												</div>
-											</div>
-										</div>
-
-										<div class="row">
-											<div class="mt-2">
-												<a href="hotel-2.html"
-												   class="me-1 text-decoration-underline">Accra</a> &bull; <a
-													href="hotel-2.html" class="mx-1 text-decoration-underline">Show
-													on
-													map</a>
-												&bull;
-												<span class="small mx-1">1km from center</span>
-											</div>
-										</div>
-
-										<div class="row g-3 mt-2 align-items-end">
-											<div class="col-lg-7 lh-1">
-												<p class="">Deluxe King Room</p>
-												<p>1 King bed</p>
-												<p class="text-success fw-bold">Breakfast included</p>
-												<p class="text-success fw-bold">Free cancellation. No payment
-													needed</p>
-											</div>
-											<div class="col-lg-5 text-lg-end">
-												<p>1 Night, 1 Adult</p>
-												<h5 class="text-success fw-bold">NGN43,000</h5>
-												<p class="small">+ NGN7,500 taxes and charges</p>
-												<a href="hotel-2.html" class="btn btn-primary">
-													Book now
-												</a>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<!--  -->
-
-				<!--  -->
-				<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
-					<div class="card-body">
-						<div class="row g-3">
-							<div class="col-lg-4">
-								<img src="<?= base_url('assets/images/hotel/hotel-3.png') ?>" width="100%" height="auto"
-									 class="img-fluid" alt="">
-							</div>
-							<div class="col-lg-8">
-								<div class="row g-3">
-									<div class="col-lg-12">
-										<div class="row">
-											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0">Jenos Hotel</h5>
-												<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
-											</div>
-
-											<div class="col-lg-4 col-6 d-flex">
-												<div class="col-8">
-													<h6 class="fw-bold">Very Good</h6>
-													<p class="small">4,325 reviews</p>
-												</div>
-												<div class="col-4">
-													<span class="badge bg-warning p-3">8.7</span>
-												</div>
-											</div>
-										</div>
-
-										<div class="row">
-											<div class="mt-2">
-												<a href="hotel-2.html"
-												   class="me-1 text-decoration-underline">Accra</a> &bull; <a
-													href="hotel-2.html" class="mx-1 text-decoration-underline">Show
-													on
-													map</a>
-												&bull;
-												<span class="small mx-1">1km from center</span>
-											</div>
-										</div>
-
-										<div class="row g-3 mt-2 align-items-end">
-											<div class="col-lg-7 lh-1">
-												<p class="">Deluxe King Room</p>
-												<p>1 King bed</p>
-												<p class="text-success fw-bold">Breakfast included</p>
-												<p class="text-success fw-bold">Free cancellation. No payment
-													needed</p>
-											</div>
-											<div class="col-lg-5 text-lg-end">
-												<p>1 Night, 1 Adult</p>
-												<h5 class="text-success fw-bold">NGN43,000</h5>
-												<p class="small">+ NGN7,500 taxes and charges</p>
-												<a href="hotel-2.html" class="btn btn-primary">
-													Book now
-												</a>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<!--  -->
-
-				<!--  -->
-				<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
-					<div class="card-body">
-						<div class="row g-3">
-							<div class="col-lg-4">
-								<img src="<?= base_url('assets/images/hotel/hotel-4.png') ?>" width="100%" height="auto"
-									 class="img-fluid" alt="">
-							</div>
-							<div class="col-lg-8">
-								<div class="row g-3">
-									<div class="col-lg-12">
-										<div class="row">
-											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0">Jenos Hotel</h5>
-												<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
-											</div>
-
-											<div class="col-lg-4 col-6 d-flex">
-												<div class="col-8">
-													<h6 class="fw-bold">Very Good</h6>
-													<p class="small">4,325 reviews</p>
-												</div>
-												<div class="col-4">
-													<span class="badge bg-warning p-3">8.7</span>
-												</div>
-											</div>
-										</div>
-
-										<div class="row">
-											<div class="mt-2">
-												<a href="hotel-2.html"
-												   class="me-1 text-decoration-underline">Accra</a> &bull; <a
-													href="hotel-2.html" class="mx-1 text-decoration-underline">Show
-													on
-													map</a>
-												&bull;
-												<span class="small mx-1">1km from center</span>
-											</div>
-										</div>
-
-										<div class="row g-3 mt-2 align-items-end">
-											<div class="col-lg-7 lh-1">
-												<p class="">Deluxe King Room</p>
-												<p>1 King bed</p>
-												<p class="text-success fw-bold">Breakfast included</p>
-												<p class="text-success fw-bold">Free cancellation. No payment
-													needed</p>
-											</div>
-											<div class="col-lg-5 text-lg-end">
-												<p>1 Night, 1 Adult</p>
-												<h5 class="text-success fw-bold">NGN43,000</h5>
-												<p class="small">+ NGN7,500 taxes and charges</p>
-												<a href="hotel-2.html" class="btn btn-primary">
-													Book now
-												</a>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<!--  -->
-
-				<!--  -->
-				<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
-					<div class="card-body">
-						<div class="row g-3">
-							<div class="col-lg-4">
-								<img src="<?= base_url('assets/images/hotel/hotel-1.png') ?>" width="100%" height="auto"
-									 class="img-fluid" alt="">
-							</div>
-							<div class="col-lg-8">
-								<div class="row g-3">
-									<div class="col-lg-12">
-										<div class="row">
-											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0">Jenos Hotel</h5>
-												<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
-											</div>
-
-											<div class="col-lg-4 col-6 d-flex">
-												<div class="col-8">
-													<h6 class="fw-bold">Very Good</h6>
-													<p class="small">4,325 reviews</p>
-												</div>
-												<div class="col-4">
-													<span class="badge bg-warning p-3">8.7</span>
-												</div>
-											</div>
-										</div>
-
-										<div class="row">
-											<div class="mt-2">
-												<a href="hotel-2.html"
-												   class="me-1 text-decoration-underline">Accra</a> &bull; <a
-													href="hotel-2.html" class="mx-1 text-decoration-underline">Show
-													on
-													map</a>
-												&bull;
-												<span class="small mx-1">1km from center</span>
-											</div>
-										</div>
-
-										<div class="row g-3 mt-2 align-items-end">
-											<div class="col-lg-7 lh-1">
-												<p class="">Deluxe King Room</p>
-												<p>1 King bed</p>
-												<p class="text-success fw-bold">Breakfast included</p>
-												<p class="text-success fw-bold">Free cancellation. No payment
-													needed</p>
-											</div>
-											<div class="col-lg-5 text-lg-end">
-												<p>1 Night, 1 Adult</p>
-												<h5 class="text-success fw-bold">NGN43,000</h5>
-												<p class="small">+ NGN7,500 taxes and charges</p>
-												<a href="hotel-2.html" class="btn btn-primary">
-													Book now
-												</a>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<!--  -->
-
-				<!--  -->
-				<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
-					<div class="card-body">
-						<div class="row g-3">
-							<div class="col-lg-4">
-								<img src="<?= base_url('assets/images/hotel/hotel-2.png') ?>" width="100%" height="auto"
-									 class="img-fluid" alt="">
-							</div>
-							<div class="col-lg-8">
-								<div class="row g-3">
-									<div class="col-lg-12">
-										<div class="row">
-											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0">Jenos Hotel</h5>
-												<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
-											</div>
-
-											<div class="col-lg-4 col-6 d-flex">
-												<div class="col-8">
-													<h6 class="fw-bold">Very Good</h6>
-													<p class="small">4,325 reviews</p>
-												</div>
-												<div class="col-4">
-													<span class="badge bg-warning p-3">8.7</span>
-												</div>
-											</div>
-										</div>
-
-										<div class="row">
-											<div class="mt-2">
-												<a href="hotel-2.html"
-												   class="me-1 text-decoration-underline">Accra</a> &bull; <a
-													href="hotel-2.html" class="mx-1 text-decoration-underline">Show
-													on
-													map</a>
-												&bull;
-												<span class="small mx-1">1km from center</span>
-											</div>
-										</div>
-
-										<div class="row g-3 mt-2 align-items-end">
-											<div class="col-lg-7 lh-1">
-												<p class="">Deluxe King Room</p>
-												<p>1 King bed</p>
-												<p class="text-success fw-bold">Breakfast included</p>
-												<p class="text-success fw-bold">Free cancellation. No payment
-													needed</p>
-											</div>
-											<div class="col-lg-5 text-lg-end">
-												<p>1 Night, 1 Adult</p>
-												<h5 class="text-success fw-bold">NGN43,000</h5>
-												<p class="small">+ NGN7,500 taxes and charges</p>
-												<a href="hotel-2.html" class="btn btn-primary">
-													Book now
-												</a>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<!--  -->
-
-				<!--  -->
-				<div class="card border-0 mt-4" data-aos="fade-up" data-aos-duration="1000">
-					<div class="card-body">
-						<div class="row g-3">
-							<div class="col-lg-4">
-								<img src="<?= base_url('assets/images/hotel/hotel-3.png') ?>" width="100%" height="auto"
-									 class="img-fluid" alt="">
-							</div>
-							<div class="col-lg-8">
-								<div class="row g-3">
-									<div class="col-lg-12">
-										<div class="row">
-											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0">Jenos Hotel</h5>
-												<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
-											</div>
-
-											<div class="col-lg-4 col-6 d-flex">
-												<div class="col-8">
-													<h6 class="fw-bold">Very Good</h6>
-													<p class="small">4,325 reviews</p>
-												</div>
-												<div class="col-4">
-													<span class="badge bg-warning p-3">8.7</span>
-												</div>
-											</div>
-										</div>
-
-										<div class="row">
-											<div class="mt-2">
-												<a href="hotel-2.html"
-												   class="me-1 text-decoration-underline">Accra</a> &bull; <a
-													href="hotel-2.html" class="mx-1 text-decoration-underline">Show
-													on
-													map</a>
-												&bull;
-												<span class="small mx-1">1km from center</span>
-											</div>
-										</div>
-
-										<div class="row g-3 mt-2 align-items-end">
-											<div class="col-lg-7 lh-1">
-												<p class="">Deluxe King Room</p>
-												<p>1 King bed</p>
-												<p class="text-success fw-bold">Breakfast included</p>
-												<p class="text-success fw-bold">Free cancellation. No payment
-													needed</p>
-											</div>
-											<div class="col-lg-5 text-lg-end">
-												<p>1 Night, 1 Adult</p>
-												<h5 class="text-success fw-bold">NGN43,000</h5>
-												<p class="small">+ NGN7,500 taxes and charges</p>
-												<a href="hotel-2.html" class="btn btn-primary">
-													Book now
-												</a>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<!--  -->
 			</div>
 		</div>
 	</div>
