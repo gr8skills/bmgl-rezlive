@@ -1,3 +1,23 @@
+<?php
+/**
+ * Convert USD price to NGN (Nigerian Naira)
+ * @param float|string $price Price in USD
+ * @param string $sourceCurrency Source currency code (default USD)
+ * @return float Price in NGN
+ */
+function convertToNaira($price, $sourceCurrency = 'USD') {
+	$price = (float) $price;
+	// Only convert if source is USD
+	if (strtoupper($sourceCurrency) === 'USD') {
+		return $price * USD_TO_NGN_RATE;
+	}
+	return $price;
+}
+
+// Get API currency for conversion
+$apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 'USD';
+?>
+
 <section class="hotel-bookings">
 	<div class="container">
 		<div class="row g-3">
@@ -195,32 +215,40 @@
 				</div>
 				<!-- web -->
 				<div class="d-none d-lg-block">
+					<?php
+					// Get hotel images from API or use defaults
+					$hotelImages = [];
+					if (isset($hotelDetails->Images) && !empty($hotelDetails->Images)) {
+						$hotelImages = is_array($hotelDetails->Images) ? $hotelDetails->Images : [$hotelDetails->Images];
+					}
+					$defaultImg = base_url('assets/images/hotel/hotel-5.png');
+					?>
 					<div class="row mt-3 g-2" data-aos="fade-up" data-aos-duration="1000">
 						<div class="col-lg-4">
 							<div class="col">
-								<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" width="100%" height="200" alt="">
+								<img src="<?= isset($hotelImages[0]) ? $hotelImages[0] : $defaultImg ?>" width="100%" height="200" alt="<?= htmlspecialchars($defaults->hotelName) ?>">
 							</div>
 							<div class="col mt-2">
-								<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" width="100%" height="200" alt="">
+								<img src="<?= isset($hotelImages[1]) ? $hotelImages[1] : $defaultImg ?>" width="100%" height="200" alt="<?= htmlspecialchars($defaults->hotelName) ?>">
 							</div>
 						</div>
 						<div class="col-lg-8">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" width="100%" height="100%" alt="">
+							<img src="<?= isset($hotelImages[2]) ? $hotelImages[2] : $defaultImg ?>" width="100%" height="100%" alt="<?= htmlspecialchars($defaults->hotelName) ?>">
 						</div>
 					</div>
 
 					<div class="row mt-1 g-2" data-aos="fade-up" data-aos-duration="1000">
 						<div class="col-lg-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" width="100%" height="150" alt="">
+							<img src="<?= isset($hotelImages[3]) ? $hotelImages[3] : $defaultImg ?>" width="100%" height="150" alt="<?= htmlspecialchars($defaults->hotelName) ?>">
 						</div>
 						<div class="col-lg-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" width="100%" height="150" alt="">
+							<img src="<?= isset($hotelImages[4]) ? $hotelImages[4] : $defaultImg ?>" width="100%" height="150" alt="<?= htmlspecialchars($defaults->hotelName) ?>">
 						</div>
 						<div class="col-lg-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" width="100%" height="150" alt="">
+							<img src="<?= isset($hotelImages[5]) ? $hotelImages[5] : $defaultImg ?>" width="100%" height="150" alt="<?= htmlspecialchars($defaults->hotelName) ?>">
 						</div>
 						<div class="col-lg-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" width="100%" height="150" alt="">
+							<img src="<?= isset($hotelImages[6]) ? $hotelImages[6] : $defaultImg ?>" width="100%" height="150" alt="<?= htmlspecialchars($defaults->hotelName) ?>">
 						</div>
 					</div>
 				</div>
@@ -231,65 +259,25 @@
 				<div class="row mt-5 d-lg-none" data-aos="fade-up" data-aos-duration="1000">
 					<div class="main-gallery js-flickity hotel-mobile-carousel"
 						 data-flickity-options='{ "cellAlign": "center", "contain": "true", "freeScroll": "true", "wrapAround": true }'>
-						<!-- carousel 1  -->
+						<?php
+						// Mobile carousel - use hotel images from API or defaults
+						$carouselCount = !empty($hotelImages) ? min(count($hotelImages), 8) : 4;
+						for ($i = 0; $i < $carouselCount; $i++):
+							$imgSrc = isset($hotelImages[$i]) ? $hotelImages[$i] : $defaultImg;
+						?>
 						<div class="card carousel-cell border-0 rounded my-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" class="card-img" width="100%" height="auto"
-								 alt="">
+							<img src="<?= $imgSrc ?>" class="card-img" width="100%" height="auto"
+								 alt="<?= htmlspecialchars($defaults->hotelName) ?> - Image <?= $i + 1 ?>">
 						</div>
-						<!-- carousel 1 -->
-
-						<!-- carousel 2  -->
-						<div class="card carousel-cell border-0 rounded my-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" class="card-img" width="100%" height="auto"
-								 alt="">
-						</div>
-						<!-- carousel 2 -->
-
-						<!-- carousel 3  -->
-						<div class="card carousel-cell border-0 rounded my-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" class="card-img" width="100%" height="auto"
-								 alt="">
-						</div>
-						<!-- carousel 3 -->
-
-						<!-- carousel 4  -->
-						<div class="card carousel-cell border-0 rounded my-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" class="card-img" width="100%" height="auto"
-								 alt="">
-						</div>
-						<!-- carousel 4 -->
-
-						<!-- carousel 5  -->
-						<div class="card carousel-cell border-0 rounded my-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" class="card-img" width="100%" height="auto"
-								 alt="">
-						</div>
-						<!-- carousel 5 -->
-
-						<!-- carousel 6  -->
-						<div class="card carousel-cell border-0 rounded my-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" class="card-img" width="100%" height="auto"
-								 alt="">
-						</div>
-						<!-- carousel 6 -->
-
-						<!-- carousel 7  -->
-						<div class="card carousel-cell border-0 rounded my-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" class="card-img" width="100%" height="auto"
-								 alt="">
-						</div>
-						<!-- carousel 7 -->
-
-						<!-- carousel 8  -->
-						<div class="card carousel-cell border-0 rounded my-3">
-							<img src="<?= base_url('assets/images/hotel/hotel-5.png') ?>" class="card-img" width="100%" height="auto"
-								 alt="">
-						</div>
-						<!-- carousel 8 -->
+						<?php endfor; ?>
 					</div>
 					<div class="col-lg-12 text-center">
-						<a href="#"><i class="ri-map-pin-line ri-lg"></i> 25, Lorem Ipsum lane off Dudu street, is
-							simply dummy text of the printing and typesetting </a>
+						<a href="<?= isset($hotelDetails->Latitude) && isset($hotelDetails->Longitude) ? 'https://www.google.com/maps/@' . $hotelDetails->Latitude . ',' . $hotelDetails->Longitude . ',15z' : '#' ?>" target="_blank">
+							<i class="ri-map-pin-line ri-lg"></i>
+							<?= isset($hotelDetails->HotelAddress) ? htmlspecialchars($hotelDetails->HotelAddress) : '' ?>
+							<?= isset($hotelDetails->City) ? ', ' . htmlspecialchars($hotelDetails->City) : '' ?>
+							<?= isset($hotelDetails->Country) ? ' ' . htmlspecialchars($hotelDetails->Country) : '' ?>
+						</a>
 
 						<div class="col-6 d-grid mt-3 m-auto">
 							<a href="#" onclick="document.getElementById('pricesSection').scrollIntoView({ behavior: 'smooth' });" class="btn btn-primary btn-lg fw-bold">Reserve</a>
@@ -479,10 +467,9 @@
 							<p><i class="ri-user-fill"></i> <i class="ri-user-fill"></i></p>
 						</div>
 						<div class="col-lg-2">
-							<h5 class="fw-bold text-success"><?= $defaults->currency.' '. $detail->TotalRate ?></h5>
-							<p class="small">+ NGN7,500 taxes and
-								charges.
-							</p>
+							<h5 class="fw-bold text-success"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format(convertToNaira($detail->TotalRate, $apiCurrency), 2) ?></h5>
+							<?php $taxAmount = convertToNaira($detail->TotalRate, $apiCurrency) * 0.05; ?>
+							<p class="small">+ <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($taxAmount, 2) ?> taxes and charges</p>
 						</div>
 						<div class="col-lg">
 							<div class="row g-0">
@@ -548,7 +535,7 @@
 										<input type="hidden" name="hotelId" value="<?= $hotelDetails->HotelId ?>">
 										<input type="hidden" name="hotelName" value="<?= $hotelDetails->HotelName ?? '' ?>">
 										<input type="hidden" name="price" value="<?= $detail->TotalRate ?>">
-										<input type="hidden" name="currency" value="<?= $defaults->hotelCurrency ?>">
+										<input type="hidden" name="currency" value="<?= DISPLAY_CURRENCY ?>">
 										<input type="hidden" name="roomType" value="<?= $detail->Type ?>">
 										<input type="hidden" name="boardBasis" value="<?= $detail->BoardBasis ?>">
 										<input type="hidden" name="bookingKey" value="<?= $detail->BookingKey ?>">
@@ -678,15 +665,15 @@
 								<input type="hidden" name="cityCode" value="<?= $hotelDetails->Hotels->CityCode ?>">
 								<input type="hidden" name="hotelId" value="<?= $hotelDetails->Hotels->HotelId ?>">
 								<input type="hidden" name="hotelName" value="<?= $hotelDetails->Hotels->HotelName ?? '' ?>">
-								<input type="hidden" name="price" value="<?= $detail->TotalRate ?>">
-								<input type="hidden" name="currency" value="<?= $apiResponse->Currency ?>">
+								<input type="hidden" name="price" value="<?= convertToNaira($detail->TotalRate, $apiCurrency) ?>">
+								<input type="hidden" name="currency" value="<?= DISPLAY_CURRENCY ?>">
 								<input type="hidden" name="roomType" value="<?= $detail->Type ?>">
 								<input type="hidden" name="boardBasis" value="<?= $detail->BoardBasis ?>">
 								<input type="hidden" name="bookingKey" value="<?= $detail->BookingKey ?>">
 								<input type="hidden" name="adults" value="<?= $detail->Adults ?? 1 ?>">
 								<input type="hidden" name="children" value="<?= $detail->Children ?? 0 ?>">
 								<input type="hidden" name="totalRooms" value="<?= $detail->TotalRooms ?? 1 ?>">
-								<input type="hidden" name="totalRate" value="<?= $detail->TotalRate ?>">
+								<input type="hidden" name="totalRate" value="<?= convertToNaira($detail->TotalRate, $apiCurrency) ?>">
 								<button type="submit" class="btn btn-primary px-5 rounded-0 fw-bold">Reserve</button>
 							</form>
 
@@ -696,9 +683,9 @@
 							</ul>
 						</div>
 						<div class="col-md-12 mt-3">
-							<h4 class="text-success"><?= $defaults->currency.' '.$detail->TotalRate ?></h4>
-							<p class="small">+ NGN7,500 taxes and charges.
-							</p>
+							<h4 class="text-success"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format(convertToNaira($detail->TotalRate, $apiCurrency), 2) ?></h4>
+							<?php $taxAmountMobile = convertToNaira($detail->TotalRate, $apiCurrency) * 0.05; ?>
+							<p class="small">+ <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($taxAmountMobile, 2) ?> taxes and charges</p>
 						</div>
 					</div>
 				</div>
@@ -733,38 +720,34 @@
 <section data-aos="fade-up" data-aos-duration="1000" id="guestReviewsSection">
 	<div class="container">
 		<div class="row">
-			<h5 class="fw-bold mb-4">Guest Reviews (78)</h5>
-			<div class="col-lg col-sm-12">
-				<h6 class="fw-bold">A wonderful abode</h6>
-				<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid mb-3" alt="">
-				<p>Lorem Ipsum has been the industry's standard dummy text ever since the 1500s</p>
-				<p>April 2, 2022</p>
-			</div>
-			<div class="col-lg col-sm-12">
-				<h6 class="fw-bold">A wonderful abode</h6>
-				<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid mb-3" alt="">
-				<p>Lorem Ipsum has been the industry's standard dummy text ever since the 1500s</p>
-				<p>April 2, 2022</p>
-			</div>
-			<div class="col-lg col-sm-12">
-				<h6 class="fw-bold">A wonderful abode</h6>
-				<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid mb-3" alt="">
-				<p>Lorem Ipsum has been the industry's standard dummy text ever since the 1500s</p>
-				<p>April 2, 2022</p>
-			</div>
-			<div class="col-lg col-sm-12">
-				<h6 class="fw-bold">A wonderful abode</h6>
-				<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid mb-3" alt="">
-				<p>Lorem Ipsum has been the industry's standard dummy text ever since the 1500s</p>
-				<p>April 2, 2022</p>
-			</div>
-			<div class="col-lg col-sm-12">
-				<h6 class="fw-bold">A wonderful abode</h6>
-				<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid mb-3" alt="">
-				<p>Lorem Ipsum has been the industry's standard dummy text ever since the 1500s</p>
-				<p>April 2, 2022</p>
-			</div>
+			<?php
+			// Get reviews from hotel details if available
+			$reviews = isset($hotelDetails->Reviews) ? (is_array($hotelDetails->Reviews) ? $hotelDetails->Reviews : [$hotelDetails->Reviews]) : [];
+			$reviewCount = count($reviews);
+			?>
+			<h5 class="fw-bold mb-4">Guest Reviews <?= $reviewCount > 0 ? '(' . $reviewCount . ')' : '' ?></h5>
+			<?php if ($reviewCount > 0): ?>
+				<?php foreach (array_slice($reviews, 0, 5) as $review): ?>
+				<div class="col-lg col-sm-12">
+					<h6 class="fw-bold"><?= isset($review->Title) ? htmlspecialchars($review->Title) : 'Guest Review' ?></h6>
+					<?php if (isset($review->Rating)): ?>
+						<?php for ($i = 0; $i < min((int)$review->Rating, 5); $i++): ?>
+							<i class="ri-star-fill text-warning"></i>
+						<?php endfor; ?>
+					<?php else: ?>
+						<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid mb-3" alt="">
+					<?php endif; ?>
+					<p><?= isset($review->Comment) ? htmlspecialchars($review->Comment) : '' ?></p>
+					<p><?= isset($review->Date) ? date('F j, Y', strtotime($review->Date)) : '' ?></p>
+				</div>
+				<?php endforeach; ?>
+			<?php else: ?>
+				<div class="col-12">
+					<p class="text-muted">No reviews available yet for this property.</p>
+				</div>
+			<?php endif; ?>
 		</div>
+	</div>
 </section>
 <!-- Guest reviews -->
 

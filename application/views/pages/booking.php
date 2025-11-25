@@ -66,36 +66,38 @@
 						<h5 class="fw-bold">Your booking details</h5>
 						<div class="row mt-4">
 							<?php
-							$arrivalDate = DateTime::createFromFormat('d/m/Y', $apiResponse ? $apiResponse->arrivalDate : $default->arrivalDate);
-							$departureDate = DateTime::createFromFormat('d/m/Y', $apiResponse ? $apiResponse->departureDate : $default->departureDate);
+							$arrivalDateStr = $apiResponse ? (string)$apiResponse->arrivalDate : $default->arrivalDate;
+							$departureDateStr = $apiResponse ? (string)$apiResponse->departureDate : $default->departureDate;
+
+							$arrivalDate = DateTime::createFromFormat('d/m/Y', $arrivalDateStr);
+							$departureDate = DateTime::createFromFormat('d/m/Y', $departureDateStr);
+
+							// Fallback if date parsing fails
+							if ($arrivalDate === false) {
+								$arrivalDate = new DateTime();
+							}
+							if ($departureDate === false) {
+								$departureDate = new DateTime('+1 day');
+							}
+
 							if ($departureDate <= $arrivalDate) {
-								$nights = 0; // or throw an error
+								$nights = 1;
 							} else {
 								$nights = $arrivalDate->diff($departureDate)->days;
 							}
-							$nights > 1 ? $nightText = 'Nights' : $nightText = 'Night';
-							$rate = 1;
+							$nightText = $nights > 1 ? 'Nights' : 'Night';
+
+							// Use exchange rate from controller if available
+							$rate = isset($exchangeRate) ? $exchangeRate : 1;
 							$currency = '&#8358;';
-							if ($apiResponse && $apiResponse->currency == 'USD' && $apiResponse->countryCode == 'NG') {
-								// convert to NGN
-								$url = "https://open.er-api.com/v6/latest/USD";
-								$response = file_get_contents($url);
-
-								if ($response === FALSE) {
-									die("Error fetching exchange rate.");
-								}
-
-								$data = json_decode($response, true);
-
-								if (isset($data["rates"]["NGN"])) {
-									$rate = $data["rates"]["NGN"];
-								}
-							} else {
-								$currency = $apiResponse?$apiResponse->currency:$default->currency;
+							if ($apiResponse && (string)$apiResponse->currency !== 'NGN') {
+								$currency = $apiResponse ? (string)$apiResponse->currency : $default->currency;
 							}
-							$tax = ($apiResponse?$apiResponse->totalRate:$default->totalRate)*0.05*$rate;
-							$cityTax = ($apiResponse?$apiResponse->totalRate:$default->totalRate)*0.02*$rate;
-							$total = ($apiResponse?$apiResponse->totalRate:$default->totalRate)*$rate + $tax + $cityTax;
+
+							$totalRate = $apiResponse ? (float)$apiResponse->totalRate : (float)$default->totalRate;
+							$tax = $totalRate * 0.05 * $rate;
+							$cityTax = $totalRate * 0.02 * $rate;
+							$total = $totalRate * $rate + $tax + $cityTax;
 							?>
 							<div class="col-lg-6 col-6 border-end">
 								<p class="small">Check-in</p>
@@ -130,10 +132,10 @@
 						<div class="row mt-4">
 							<div class="col-6">
 								<p class="fw-bold mb-n1">Price:</p>
-								<p class="small">Hotel’s Currency: <?= $apiResponse?$apiResponse->currency:$default->currency.' '.number_format($apiResponse?$apiResponse->totalRate : $default->totalRate, 2) ?></p>
+								<p class="small">Hotel's Currency: <?= $apiResponse ? (string)$apiResponse->currency : $default->currency ?> <?= number_format($totalRate, 2) ?></p>
 							</div>
 							<div class="col-6 text-lg-end">
-								<p class="text-success fw-bold"><?= $currency.' '.number_format($apiResponse?$apiResponse->totalRate : $default->totalRate, 2) ?></p>
+								<p class="text-success fw-bold"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($totalRate, 2) ?></p>
 							</div>
 						</div>
 
@@ -143,8 +145,8 @@
 								<p class="fw-bold">City tax</p>
 							</div>
 							<div class="col-6 text-lg-end">
-								<p class="text-success fw-bold"><?= $currency.' '.number_format($tax, 2) ?></p>
-								<p class="text-success fw-bold"><?= $currency.' '.number_format($cityTax, 2) ?></p>
+								<p class="text-success fw-bold"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($tax, 2) ?></p>
+								<p class="text-success fw-bold"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($cityTax, 2) ?></p>
 							</div>
 						</div>
 						<hr />
@@ -154,7 +156,7 @@
 								<h5 class="fw-bold my-auto">Total</h5>
 							</div>
 							<div class="col-6 text-lg-end">
-								<h5 class="text-success fw-bold my-auto"><?= $currency.' '.number_format($total, 2) ?></h5>
+								<h5 class="text-success fw-bold my-auto"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($total, 2) ?></h5>
 							</div>
 						</div>
 						<hr />
@@ -171,8 +173,8 @@
 
 						<div class="col-lg-12">
 							<h6 class="fw-bold">Your payment schedule</h6>
-							<p class="small">Before check-in you’ll pay <span
-									class="text-success fw-bold"><?= $currency.' '.number_format($total, 2) ?></span></p>
+							<p class="small">Before check-in you'll pay <span
+									class="text-success fw-bold"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($total, 2) ?></span></p>
 						</div>
 					</div>
 				</div>
@@ -204,29 +206,68 @@
 			</div>
 			<div class="col-lg-8 order-lg-1 order-1">
 				<!--  -->
+				<?php
+				// Get hotel rating info
+				$hotelRating = isset($hotelDetails->Rating) ? (float)$hotelDetails->Rating : 0;
+				if ($hotelRating >= 9) {
+					$ratingLabel = 'Exceptional';
+				} elseif ($hotelRating >= 8) {
+					$ratingLabel = 'Excellent';
+				} elseif ($hotelRating >= 7) {
+					$ratingLabel = 'Very Good';
+				} elseif ($hotelRating >= 6) {
+					$ratingLabel = 'Good';
+				} else {
+					$ratingLabel = 'Pleasant';
+				}
+
+				// Get hotel image
+				$hotelImage = base_url('assets/images/hotel/hotel-1.png');
+				if (isset($hotelDetails->Images) && !empty($hotelDetails->Images)) {
+					$images = is_array($hotelDetails->Images) ? $hotelDetails->Images : [$hotelDetails->Images];
+					$hotelImage = $images[0];
+				}
+
+				// Get max occupancy from API response if available
+				$maxPeople = isset($default->adults) ? (int)$default->adults + (int)$default->children : 2;
+
+				// Get cancellation policy
+				$isRefundable = isset($apiResponse->CancellationPolicy->Refundable) ? $apiResponse->CancellationPolicy->Refundable : 'Free';
+				$cancellationText = ($isRefundable === 'Non-Refundable' || $isRefundable === 'Non Refundable')
+					? 'Non-refundable'
+					: 'Free cancellation';
+				?>
 				<div class="card border-0">
 					<div class="card-body">
 						<div class="row g-3" data-aos="fade-up" data-aos-duration="1000">
 							<div class="col-lg-4" data-aos="fade-up" data-aos-duration="1000">
-								<img src="<?= base_url('assets/images/hotel/hotel-1.png') ?>" width="100%" height="auto"
-									 class="img-fluid" alt="">
+								<img src="<?= $hotelImage ?>" width="100%" height="auto"
+									 class="img-fluid" alt="<?= htmlspecialchars($default->hotelName) ?>">
 							</div>
 							<div class="col-lg-8" data-aos="fade-up" data-aos-duration="1000">
 								<div class="row g-3">
 									<div class="col-lg-12">
 										<div class="row">
 											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0"><?= $apiResponse?$apiResponse->hotelName : $default->hotelName ?></h5>
-												<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
+												<h5 class="fw-bold mb-n0"><?= $apiResponse ? htmlspecialchars($apiResponse->hotelName) : htmlspecialchars($default->hotelName) ?></h5>
+												<?php if (isset($hotelDetails->StarRating) && $hotelDetails->StarRating > 0): ?>
+													<?php for ($i = 0; $i < (int)$hotelDetails->StarRating; $i++): ?>
+														<i class="ri-star-fill text-warning"></i>
+													<?php endfor; ?>
+												<?php else: ?>
+													<img src="<?= base_url('assets/images/hotel/rating.svg') ?>" class="img-fluid" alt="">
+												<?php endif; ?>
 											</div>
 
 											<div class="col-lg-4 col-6 d-flex">
 												<div class="col-8">
-													<h6 class="fw-bold">Very Good</h6>
-													<p class="small"><?= mt_rand(2550, 4980); ?> reviews</p>
+													<h6 class="fw-bold"><?= $ratingLabel ?></h6>
+													<?php if (isset($hotelDetails->ReviewCount)): ?>
+														<p class="small"><?= number_format($hotelDetails->ReviewCount) ?> reviews</p>
+													<?php endif; ?>
 												</div>
 												<div class="col-4">
-													<span class="badge bg-warning p-3">7.8</span>
+													<span class="badge bg-warning p-3"><?= $hotelRating > 0 ? number_format($hotelRating, 1) : 'N/A' ?></span>
 												</div>
 											</div>
 										</div>
@@ -234,28 +275,32 @@
 										<div class="row">
 											<div class="mt-2">
 												<a href="#"
-												   class="me-1 text-decoration-underline"><?= $default->cityName ?></a> &bull; <a
-													href="https://www.google.com/maps/@<?= $hotelDetails->Latitude . ',' . $hotelDetails->Longitude . ',15z' ?>" class="mx-1 text-decoration-underline" target="_blank">Show on
-													map</a>
+												   class="me-1 text-decoration-underline"><?= htmlspecialchars($default->cityName) ?></a> &bull;
+												<?php if (isset($hotelDetails->Latitude) && isset($hotelDetails->Longitude)): ?>
+													<a href="https://www.google.com/maps/@<?= $hotelDetails->Latitude ?>,<?= $hotelDetails->Longitude ?>,15z" class="mx-1 text-decoration-underline" target="_blank">Show on map</a>
+												<?php else: ?>
+													<span class="mx-1">Show on map</span>
+												<?php endif; ?>
 												&bull;
-												<span class="small mx-1">1km from center</span>
+												<span class="small mx-1"><?= isset($hotelDetails->DistanceFromCenter) ? htmlspecialchars($hotelDetails->DistanceFromCenter) : '' ?></span>
 											</div>
 										</div>
 
 										<div class="row mt-lg-0 mt-3 align-items-end">
 											<div class="col-lg-4 lh-1">
-												<p class="text-danger">Non-refundable</p>
-												<p>Max people: <b>2</b></p>
+												<p class="<?= $cancellationText === 'Non-refundable' ? 'text-danger' : 'text-success' ?>"><?= $cancellationText ?></p>
+												<p>Max people: <b><?= $maxPeople ?></b></p>
 											</div>
 											<div class="col-lg-8 text-lg-end lh-1">
 												<?php
 												$roomType = explode(',', $default->roomType);
 												?>
-												<p class="fw-bold"><?= $roomType[0] ?></p>
-												<p class="fw-bold"><?= $roomType[1] ?></p>
-												<p class="text-success fw-bold"><?= $default->boardBasis ?></p>
-												<p class="text-success fw-bold">Free cancellation. No payment needed
-												</p>
+												<p class="fw-bold"><?= htmlspecialchars($roomType[0]) ?></p>
+												<?php if (isset($roomType[1])): ?>
+													<p class="fw-bold"><?= htmlspecialchars($roomType[1]) ?></p>
+												<?php endif; ?>
+												<p class="text-success fw-bold"><?= htmlspecialchars($default->boardBasis) ?></p>
+												<p class="text-success fw-bold"><?= $cancellationText === 'Non-refundable' ? 'Pay now' : 'Free cancellation. No payment needed' ?></p>
 											</div>
 										</div>
 									</div>
@@ -344,32 +389,54 @@
 				<div class="row" data-aos="fade-up" data-aos-duration="1000">
 					<div class="col-lg-6 mt-5">
 						<h5 class="fw-bold">Your arrival time</h5>
-						<p class="small"><i class="ri-checkbox-circle-line ri-lg text-success"></i> Your room will
-							be
-							ready
-							for check-in by 12:00 AM</p>
-						<p class="small"><i class="ri-24-hours-line ri-lg text-success"></i> 24 hour
-							desk help whenever you need</p>
+						<p class="small"><i class="ri-checkbox-circle-line ri-lg text-success"></i> Your room will be ready for check-in by <?= isset($hotelDetails->CheckInTime) ? htmlspecialchars($hotelDetails->CheckInTime) : '2:00 PM' ?></p>
+						<p class="small"><i class="ri-24-hours-line ri-lg text-success"></i> 24 hour desk help whenever you need</p>
 					</div>
 
 					<div class="col-lg-6 mt-5">
-						<h6><b>Add your estimated arrival time</b> (optimal)</h6>
+						<h6><b>Add your estimated arrival time</b> (optional)</h6>
 						<div class="col-lg-5">
-							<select class="form-select" aria-label="Default select example">
-								<option selected>Please select</option>
-								<option value="1">One</option>
-								<option value="2">Two</option>
-								<option value="3">Three</option>
+							<select class="form-select" name="arrivalTime" aria-label="Estimated arrival time">
+								<option value="" selected>Please select</option>
+								<option value="00:00-01:00">12:00 AM - 1:00 AM</option>
+								<option value="01:00-02:00">1:00 AM - 2:00 AM</option>
+								<option value="02:00-03:00">2:00 AM - 3:00 AM</option>
+								<option value="03:00-04:00">3:00 AM - 4:00 AM</option>
+								<option value="04:00-05:00">4:00 AM - 5:00 AM</option>
+								<option value="05:00-06:00">5:00 AM - 6:00 AM</option>
+								<option value="06:00-07:00">6:00 AM - 7:00 AM</option>
+								<option value="07:00-08:00">7:00 AM - 8:00 AM</option>
+								<option value="08:00-09:00">8:00 AM - 9:00 AM</option>
+								<option value="09:00-10:00">9:00 AM - 10:00 AM</option>
+								<option value="10:00-11:00">10:00 AM - 11:00 AM</option>
+								<option value="11:00-12:00">11:00 AM - 12:00 PM</option>
+								<option value="12:00-13:00">12:00 PM - 1:00 PM</option>
+								<option value="13:00-14:00">1:00 PM - 2:00 PM</option>
+								<option value="14:00-15:00">2:00 PM - 3:00 PM</option>
+								<option value="15:00-16:00">3:00 PM - 4:00 PM</option>
+								<option value="16:00-17:00">4:00 PM - 5:00 PM</option>
+								<option value="17:00-18:00">5:00 PM - 6:00 PM</option>
+								<option value="18:00-19:00">6:00 PM - 7:00 PM</option>
+								<option value="19:00-20:00">7:00 PM - 8:00 PM</option>
+								<option value="20:00-21:00">8:00 PM - 9:00 PM</option>
+								<option value="21:00-22:00">9:00 PM - 10:00 PM</option>
+								<option value="22:00-23:00">10:00 PM - 11:00 PM</option>
+								<option value="23:00-00:00">11:00 PM - 12:00 AM</option>
 							</select>
 						</div>
 					</div>
 				</div>
 
-
-
 				<div class="col-lg-12 mt-3" data-aos="fade-up" data-aos-duration="1000">
 					<div class="d-grid d-md-flex justify-content-md-end">
-						<a href="hotel-4.html" class="btn btn-warning fw-bold btn-lg px-5">Pay <?= $currency.' '.$total ?> Now</a>
+						<form action="<?= site_url('booking/confirm') ?>" method="post">
+							<input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
+							<input type="hidden" name="hotelId" value="<?= htmlspecialchars($default->hotelId) ?>">
+							<input type="hidden" name="hotelName" value="<?= htmlspecialchars($default->hotelName) ?>">
+							<input type="hidden" name="totalAmount" value="<?= $total ?>">
+							<input type="hidden" name="currency" value="<?= htmlspecialchars($default->currency) ?>">
+							<button type="submit" class="btn btn-warning fw-bold btn-lg px-5">Pay <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($total, 2) ?> Now</button>
+						</form>
 					</div>
 				</div>
 

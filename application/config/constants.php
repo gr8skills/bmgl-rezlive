@@ -86,3 +86,13 @@ defined('EXIT__AUTO_MAX')      OR define('EXIT__AUTO_MAX', 125); // highest auto
 
 //defined constants
 define('API_URL', 'http://test.xmlhub.com/testpanel.php/action/'); //dev environment
+define('API_KEY', '20f3fdffd79b56d060f941fa4f0a9bda');
+define('AGENT_CODE', 'CD33604');
+define('AGENT_USERNAME', 'GOFLY1');
+define('DEFAULT_COUNTRY_CODE', 'NG');
+define('DEFAULT_CITY_CODE', '31606'); // Lagos
+
+// Currency conversion
+define('USD_TO_NGN_RATE', 1600); // USD to Nigerian Naira exchange rate
+define('DISPLAY_CURRENCY', 'NGN');
+define('DISPLAY_CURRENCY_SYMBOL', '₦');

@@ -5,454 +5,287 @@ use Carbon\Carbon;
 
 class Hotel extends CI_Controller {
 
-
 	public function __construct()
 	{
 		parent::__construct();
-		$this->load->database();
 	}
 
-	public function testSession() {
-		var_dump($this->session->all_userdata());
-	}
+	/**
+	 * Display hotel details and room options
+	 */
+	public function index()
+	{
+		// PRG Pattern: If POST request, save to session and redirect to GET
+		if ($this->input->post('hotelId')) {
+			$this->session->set_userdata([
+				'hotelId' => $this->input->post('hotelId'),
+				'hotelName' => $this->input->post('hotelName'),
+				'arrival' => $this->input->post('arrival'),
+				'departure' => $this->input->post('departure'),
+				'guestData' => $this->input->post('guestData') ?: '1,0,1'
+			]);
+			// Redirect to same page as GET request
+			redirect('hotel/index');
+			return;
+		}
 
-	public function index() {
 		set_time_limit(0);
-		// Hotel form data
-		$hotelId = $this->input->post('hotelId');
-		$hotelName = $this->input->post('hotelName');
-		$arrival   = $this->input->post('arrival');
-		$departure  = $this->input->post('departure');
-		$guests  = $this->input->post('guestData');
 
-		// cache the form data
-		if (!is_null($hotelId) && !is_null($arrival) && !is_null($departure)) {
-			$this->session->set_userdata('hotelId', $hotelId);
-			$this->session->set_userdata('hotelName', $hotelName);
-			$this->session->set_userdata('arrival', $arrival);
-			$this->session->set_userdata('departure', $departure);
-			$this->session->set_userdata('guestData', $guests);
-		} else {
-			$hotelId = $this->session->userdata('hotelId');
-			$hotelName = $this->session->userdata('hotelName');
-			$arrival = $this->session->userdata('arrival');
-			$departure = $this->session->userdata('departure');
-			$guests = $this->session->userdata('guestData');
+		// Get hotel data from session (after redirect)
+		$hotelId = $this->session->userdata('hotelId');
+		$hotelName = $this->session->userdata('hotelName');
+		$arrival = $this->session->userdata('arrival');
+		$departure = $this->session->userdata('departure');
+		$guests = $this->session->userdata('guestData') ?: '1,0,1';
+
+		// Validate required data
+		if (empty($hotelId)) {
+			redirect('home');
+			return;
 		}
 
-		if (is_null($guests)) {
-			$guests = '1,0,1'; // default to 1 adult, 0 children, 1 room
+		$data['title'] = ($hotelName ?? 'Hotel') . " | MakeIFly";
+
+		// Format dates - handle both Y-m-d and d/m/Y formats
+		$arrivalCarbon = Carbon::createFromFormat('Y-m-d', $arrival);
+		if ($arrivalCarbon === false) {
+			$arrivalCarbon = Carbon::createFromFormat('d/m/Y', $arrival);
+		}
+		if ($arrivalCarbon === false) {
+			$arrivalCarbon = Carbon::now();
 		}
 
-		// var_dump($this->session->all_userdata());
-
-		$data['title'] = $hotelName??'Hotel'." | MakeIFly - Flight booking and Hotel Reservation";
-
-		$now = Carbon::createFromFormat('Y-m-d', $arrival)->format('d/m/Y');
-		$afterOneMonth = Carbon::createFromFormat('Y-m-d', $departure)->format('d/m/Y');
-
-		$this->db->select('name, country_code, city_code');
-		$this->db->from('cities');
-		$this->db->where('city_code', $hotelId);
-		$query = $this->db->get();
-
-		if ($query->num_rows() > 0) {
-			$row = $query->row();
-			$cityCode = $row->city_code;
-			$countryCode = $row->country_code;
-		} else {
-			$cityCode = '31606'; // Default to Lagos if not found
-			$countryCode = 'NG';
+		$departureCarbon = Carbon::createFromFormat('Y-m-d', $departure);
+		if ($departureCarbon === false) {
+			$departureCarbon = Carbon::createFromFormat('d/m/Y', $departure);
+		}
+		if ($departureCarbon === false) {
+			$departureCarbon = Carbon::now()->addDay();
 		}
 
-		// Split guests string into parts
+		$now = $arrivalCarbon->format('d/m/Y');
+		$afterOneMonth = $departureCarbon->format('d/m/Y');
+
+		// Get hotel details first to find city/country info
+		$hotelDetails = $this->rezlive_api->getHotelDetails($hotelId);
+		$cityCode = DEFAULT_CITY_CODE;
+		$countryCode = DEFAULT_COUNTRY_CODE;
+
+		if ($hotelDetails && isset($hotelDetails->Hotels)) {
+			$hotelInfo = $hotelDetails->Hotels;
+			// Try to get city code from hotel details
+			if (isset($hotelInfo->City)) {
+				$cityName = (string)$hotelInfo->City;
+				$countryName = isset($hotelInfo->Country) ? (string)$hotelInfo->Country : '';
+				// Look up city code from city name
+				$cityRecord = $this->city_model->get_by_name_and_country($cityName, $countryName);
+				if ($cityRecord) {
+					$cityCode = $cityRecord->city_code;
+					$countryCode = $cityRecord->country_code;
+				}
+			}
+		}
+
+		// Parse guests
 		$guestsArr = explode(',', $guests);
-
-		$adults   = isset($guestsArr[0]) ? (int)$guestsArr[0] : 0;
+		$adults = isset($guestsArr[0]) ? (int)$guestsArr[0] : 1;
 		$children = isset($guestsArr[1]) ? (int)$guestsArr[1] : 0;
-		$rooms    = isset($guestsArr[2]) ? (int)$guestsArr[2] : 0;
+		$rooms = isset($guestsArr[2]) ? (int)$guestsArr[2] : 1;
 
+		// Generate children ages XML
 		$childrenAges = '';
-		if ((int)$children > 0) {
+		if ($children > 0) {
 			for ($i = 0; $i < $children; $i++) {
-				$age = $i+1;
-				$childrenAges .= "<ChildrenAges><ChildAge>{$age}</ChildAge></ChildrenAges>"; // Default age 2 for each child
+				$age = $i + 1;
+				$childrenAges .= "<ChildrenAges><ChildAge>{$age}</ChildAge></ChildrenAges>";
 			}
 		}
 
-		$SearchSessionId = $CountryCode = $hotelCurrency = null;
+		// Search hotel by ID using API library
+		$apiResponse = $this->rezlive_api->findHotels([
+			'arrivalDate' => $now,
+			'departureDate' => $afterOneMonth,
+			'countryCode' => $countryCode,
+			'cityCode' => $cityCode,
+			'nationality' => $countryCode,
+			'adults' => $adults,
+			'children' => $children,
+			'rooms' => $rooms,
+			'childrenAges' => $childrenAges,
+			'hotelIds' => [$hotelId],
+		]);
 
-		// XML request string
-		$xmlString = "<HotelFindRequest>
-    <Authentication>
-        <AgentCode>CD33604</AgentCode>
-        <UserName>GOFLY1</UserName>
-    </Authentication>
-    <Booking>
-        <ArrivalDate>{$now}</ArrivalDate>
-        <DepartureDate>{$afterOneMonth}</DepartureDate>
-        <CountryCode>{$countryCode}</CountryCode>
-        <City>{$cityCode}</City>
-        <GuestNationality>NG</GuestNationality>
-        <HotelRatings>
-            <HotelRating>1</HotelRating>
-            <HotelRating>2</HotelRating>
-            <HotelRating>3</HotelRating>
-            <HotelRating>4</HotelRating>
-            <HotelRating>5</HotelRating>
-        </HotelRatings>
-        <Rooms>
-            <Room>
-            	<Type>Room-{$rooms}</Type>
-                <NoOfAdults>{$adults}</NoOfAdults>
-                <NoOfChilds>{$children}</NoOfChilds>
-                {$childrenAges}
-            </Room>
-        </Rooms>
-        <HotelIDs>
-            <Int>{$hotelId}</Int>
-        </HotelIDs>
-    </Booking>
-</HotelFindRequest>";
+		$data['apiResponse'] = $apiResponse;
+		$data['hotelCount'] = 0;
+		$data['hotels'] = [];
+		$data['hotelwiseroomcount'] = 0;
+		$data['roomDetails'] = [];
 
-		// Ensure application/xml directory exists
-		$dir = APPPATH . 'xml/';
-		if (!is_dir($dir)) {
-			if (!mkdir($dir, 0775, true)) {
-				die('❌ Failed to create directories...');
-			}
-		}
+		$SearchSessionId = $hotelCurrency = null;
 
-		// Save request to file
-		$filePath = $dir . 'request' . time() . '.xml';
-		file_put_contents($filePath, $xmlString);
-
-		// Send request via cURL
-		$url = API_URL . 'findhotelbyid';
-		$headers = array('x-api-key: 20f3fdffd79b56d060f941fa4f0a9bda');
-
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_POST, 1);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, "XML=" . urlencode($xmlString));
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-		$result = curl_exec($ch);
-		if ($result === false) {
-			log_message('error', 'Curl error: ' . curl_error($ch));
-			$data['apiResponse'] = null;
-		} else {
-			// Try to decode response if gzipped
-			$decoded = @gzdecode($result);
-			$xmlResponse = $decoded !== false ? $decoded : $result;
-
-			// Save response XML (optional)
-			$responsePath = $dir . 'response' . time() . '.xml';
-			file_put_contents($responsePath, $xmlResponse);
-
-			// Parse API response
-			$data['apiResponse'] = simplexml_load_string($xmlResponse);
-			if ($data['apiResponse'] === false) {
-				log_message('error', 'Failed to parse API response XML.');
+		if ($apiResponse && isset($apiResponse->Hotels->Hotel)) {
+			// Handle both single hotel (object) and multiple hotels (array)
+			$hotels = $apiResponse->Hotels->Hotel;
+			if (!is_array($hotels)) {
+				$hotels = [$hotels];
 			}
 
-			// Count hotels
-			$hotelCount = isset($data['apiResponse']->Hotels->Hotel) ? count($data['apiResponse']->Hotels->Hotel) : 0;
+			$data['hotelCount'] = count($hotels);
+			$data['hotels'] = $hotels;
 
-			$data['hotelCount'] = $hotelCount;
-
-			$data['hotels'] = $data['apiResponse']->Hotels->Hotel ?? [];
-			$hotelwiseroomcount = 0;
-			$roomDetails = [];
 			if ($data['hotelCount'] > 0) {
-				//pick the first hotel
-				$firstHotel = $data['hotels'][0];
-				$hotelwiseroomcount = $firstHotel->Hotelwiseroomcount;
-				$roomDetails = $firstHotel->RoomDetails->RoomDetail ?? [];
+				$firstHotel = $hotels[0];
+				$data['hotelwiseroomcount'] = isset($firstHotel->Hotelwiseroomcount) ? (int)$firstHotel->Hotelwiseroomcount : 0;
+
+				// Handle room details - collect all RoomDetail elements into array
+				$data['roomDetails'] = [];
+				if (isset($firstHotel->RoomDetails) && isset($firstHotel->RoomDetails->RoomDetail)) {
+					foreach ($firstHotel->RoomDetails->RoomDetail as $room) {
+						$data['roomDetails'][] = $room;
+					}
+				}
 			}
-			$data['hotelwiseroomcount'] = $hotelwiseroomcount;
-			$data['roomDetails'] = $roomDetails;
 
-			$SearchSessionId = $data['apiResponse']->SearchSessionId;
-			$CountryCode = $data['apiResponse']->CountryCode ?? 'NG' ;
-			$hotelCurrency = $data['apiResponse']->Currency ?? '&#8358;';
-
+			$SearchSessionId = $apiResponse->SearchSessionId ?? null;
+			$hotelCurrency = $apiResponse->Currency ?? '&#8358;';
+		} else {
+			// Log for debugging
+			log_message('debug', 'Hotel search by ID returned no results for hotel: ' . $hotelId);
 		}
-		curl_close($ch);
 
-		// Parse defaults (from request, for form prefills)
-		$data['defaults'] = simplexml_load_string($xmlString);
-		$data['defaults']->hotelName = $hotelName;
-		$data['defaults']->currency = $hotelCurrency;
-		$data['defaults']->guests = $guests;
-		$data['defaults']->arrival = $arrival;
-		$data['defaults']->departure = $departure;
-		$data['defaults']->rooms = $rooms;
-		$data['defaults']->adult = $adults;
-		$data['defaults']->children = $children;
-		$data['defaults']->searchSessionId = $SearchSessionId;
-		$data['defaults']->countryCode = $CountryCode;
-		$data['defaults']->hotelCurrency = $hotelCurrency;
+		// Defaults for view
+		$data['defaults'] = (object)[
+			'Booking' => (object)[
+				'ArrivalDate' => $now,
+				'DepartureDate' => $afterOneMonth,
+				'CountryCode' => $countryCode,
+				'City' => $cityCode,
+			],
+			'hotelName' => $hotelName,
+			'currency' => $hotelCurrency,
+			'guests' => $guests,
+			'arrival' => $arrival,
+			'departure' => $departure,
+			'rooms' => $rooms,
+			'adult' => $adults,
+			'children' => $children,
+			'searchSessionId' => $SearchSessionId,
+			'countryCode' => $countryCode,
+			'hotelCurrency' => $hotelCurrency,
+		];
 
+		// Use hotel details already fetched (cached)
+		$data['hotelDetails'] = $hotelDetails ? $hotelDetails->Hotels : null;
 
-		$hotelDetails = $this->getHotelDetails($hotelId);
-		$data['hotelDetails'] = $hotelDetails->Hotels;
-
-
-		// Render view
 		$data['content'] = $this->load->view('pages/hotel', $data, TRUE);
 		$this->load->view('layouts/master', $data);
 	}
 
-	public function search() {
-		$searchBox = $this->input->post('searchBox');
-		$checkIn   = $this->input->post('checkIn');
-		$checkOut  = $this->input->post('checkOut');
-		$guests    = $this->input->post('guests');
+	/**
+	 * Search hotels (redirects to home search with different view)
+	 */
+	public function search()
+	{
+		// Get form data
+		$searchBox = $this->input->post('searchBox') ?: $this->session->userdata('searchBox');
+		$checkIn = $this->input->post('checkIn') ?: $this->session->userdata('checkIn');
+		$checkOut = $this->input->post('checkOut') ?: $this->session->userdata('checkOut');
+		$guests = $this->input->post('guests') ?: $this->session->userdata('guests') ?: '1,0,1';
 
-		if (!is_null($checkIn) && !is_null($checkOut)) {
-			$this->session->set_userdata('searchBox', $searchBox);
-			$this->session->set_userdata('checkIn', $checkIn);
-			$this->session->set_userdata('checkOut', $checkOut);
-			$this->session->set_userdata('guests', $guests);
-		} else {
-			$searchBox = $this->session->userdata('searchBox');
-			$checkIn = $this->session->userdata('checkIn');
-			$checkOut = $this->session->userdata('checkOut');
-			$guests = $this->session->userdata('guests');
+		// Save to session
+		if ($this->input->post('checkIn')) {
+			$this->session->set_userdata([
+				'searchBox' => $searchBox,
+				'checkIn' => $checkIn,
+				'checkOut' => $checkOut,
+				'guests' => $guests
+			]);
 		}
 
-		// Split guests string into parts
+		// Parse guests
 		$guestsArr = explode(',', $guests);
-
-		$adults   = isset($guestsArr[0]) ? (int)$guestsArr[0] : 0;
+		$adults = isset($guestsArr[0]) ? (int)$guestsArr[0] : 1;
 		$children = isset($guestsArr[1]) ? (int)$guestsArr[1] : 0;
-		$rooms    = isset($guestsArr[2]) ? (int)$guestsArr[2] : 0;
+		$rooms = isset($guestsArr[2]) ? (int)$guestsArr[2] : 1;
 
-		if ($searchBox) {
-			// Extract city name from "City Name (Country Name)" format
-			if (preg_match('/^(.*?)\s*\((.*?)\)$/', $searchBox, $matches)) {
-				$cityName = trim($matches[1]);
-				$countryName = trim($matches[2]);
-
-				// Query database for city code
-				$this->db->select('city_code, country_code');
-				$this->db->from('cities');
-				$this->db->where('name', $cityName);
-				$this->db->where('country_name', $countryName);
-				$query = $this->db->get();
-
-				if ($query->num_rows() > 0) {
-					$row = $query->row();
-					$cityCode = $row->city_code;
-					$countryCode = $row->country_code;
-				} else {
-					$cityCode = '31606'; // Default to Lagos if not found
-					$countryCode = 'NG';
-				}
-			} else {
-				$cityCode = '31606'; // Default to Lagos if format is incorrect
-				$countryCode = 'NG';
-			}
-		} else {
-			$cityCode = '31606'; // Default to Lagos if empty
-			$countryCode = 'NG';
-		}
-
+		// Get city codes
+		$location = $this->city_model->get_codes_from_location($searchBox);
 
 		set_time_limit(0);
-		$data['title'] = "Hotel | MakeIFly - Flight booking and Hotel Reservation";
+		$data['title'] = "Hotel Search | MakeIFly";
 
+		// Format dates
 		$arrival = Carbon::createFromFormat('Y-m-d', $checkIn)->format('d/m/Y');
 		$checkoutDate = Carbon::createFromFormat('Y-m-d', $checkOut)->format('d/m/Y');
 
-		var_dump(['arrival'=>$arrival, 'checkOutDate'=>$checkoutDate]);
+		// Validate dates
+		$arrivalCarbon = Carbon::createFromFormat('d/m/Y', $arrival);
+		$checkoutCarbon = Carbon::createFromFormat('d/m/Y', $checkoutDate);
 
-		// check if checkout date is greater than arrival date
-		if (Carbon::createFromFormat('d/m/Y', $checkoutDate)->equalTo(Carbon::createFromFormat('d/m/Y', $arrival))) {
-			$checkoutDate = Carbon::createFromFormat('d/m/Y', $arrival)->addDay()->format('d/m/Y');
-		} elseif (Carbon::createFromFormat('d/m/Y', $checkoutDate)->lessThan(Carbon::createFromFormat('d/m/Y', $arrival))) {
-			$arrival = Carbon::now()->format('d/m/Y');
-			$checkoutDate = Carbon::now()->addDay()->format('d/m/Y');
+		if ($checkoutCarbon->lessThanOrEqualTo($arrivalCarbon)) {
+			$checkoutDate = $arrivalCarbon->addDay()->format('d/m/Y');
 		}
 
+		// Search hotels
+		$apiResponse = $this->rezlive_api->findHotels([
+			'arrivalDate' => $arrival,
+			'departureDate' => $checkoutDate,
+			'countryCode' => $location['countryCode'],
+			'cityCode' => $location['cityCode'],
+			'nationality' => $location['countryCode'],
+			'adults' => $adults,
+			'children' => $children,
+			'rooms' => $rooms,
+		]);
 
-		// XML request string
-		$xmlString = "<HotelFindRequest>
-    <Authentication>    
-        <AgentCode>CD33604</AgentCode>
-        <UserName>GOFLY1</UserName>
-    </Authentication>
-    <Booking>
-        <ArrivalDate>{$arrival}</ArrivalDate>
-        <DepartureDate>{$checkoutDate}</DepartureDate>
-        <CountryCode>{$countryCode}</CountryCode>
-        <City>{$cityCode}</City>
-        <GuestNationality>NG</GuestNationality>
-        <HotelRatings>
-            <HotelRating>1</HotelRating>
-            <HotelRating>2</HotelRating>
-            <HotelRating>3</HotelRating>
-            <HotelRating>4</HotelRating>
-            <HotelRating>5</HotelRating>
-        </HotelRatings>
-        <Rooms>
-            <Room>
-                <Type>Room-{$rooms}</Type>
-                <NoOfAdults>{$adults}</NoOfAdults>
-                <NoOfChilds>{$children}</NoOfChilds>
-            </Room>
-        </Rooms>
-    </Booking>
-</HotelFindRequest>";
+		$data['apiResponse'] = $apiResponse;
+		$data['hotelCount'] = 0;
+		$data['hotels'] = [];
 
-		// Ensure application/xml directory exists
-		$dir = APPPATH . 'xml/';
-		if (!is_dir($dir)) {
-			if (!mkdir($dir, 0775, true)) {
-				die('❌ Failed to create directories...');
-			}
+		if ($apiResponse) {
+			$data['hotelCount'] = isset($apiResponse->Hotels->Hotel) ? count($apiResponse->Hotels->Hotel) : 0;
+			$data['hotels'] = $apiResponse->Hotels->Hotel ?? [];
 		}
 
-		// Save request to file
-		$filePath = $dir . 'request' . time() . '.xml';
-		file_put_contents($filePath, $xmlString);
+		$data['defaults'] = (object)[
+			'Booking' => (object)[
+				'ArrivalDate' => $arrival,
+				'DepartureDate' => $checkoutDate,
+			],
+			'location' => $searchBox ?: 'Lagos (Nigeria)',
+			'currency' => '&#8358;',
+			'guests' => $guests
+		];
 
-		// Send request via cURL
-		$url = API_URL . 'findhotel';
-		$headers = array('x-api-key: 20f3fdffd79b56d060f941fa4f0a9bda');
-
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_POST, 1);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, "XML=" . urlencode($xmlString));
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-		$result = curl_exec($ch);
-		if ($result === false) {
-			log_message('error', 'Curl error: ' . curl_error($ch));
-			$data['apiResponse'] = null;
-		} else {
-			// Try to decode response if gzipped
-			$decoded = @gzdecode($result);
-			$xmlResponse = $decoded !== false ? $decoded : $result;
-
-			// Save response XML (optional)
-			$responsePath = $dir . 'response' . time() . '.xml';
-			file_put_contents($responsePath, $xmlResponse);
-
-			// Parse API response
-			$data['apiResponse'] = simplexml_load_string($xmlResponse);
-			if ($data['apiResponse'] === false) {
-				log_message('error', 'Failed to parse API response XML.');
-			}
-			// Count hotels
-			$hotelCount = isset($data['apiResponse']->Hotels->Hotel) ? count($data['apiResponse']->Hotels->Hotel) : 0;
-
-			$data['hotelCount'] = $hotelCount;
-
-			$data['hotels'] = $data['apiResponse']->Hotels->Hotel ?? [];
-
-		}
-		curl_close($ch);
-
-		// Parse defaults (from request, for form prefills)
-		$data['defaults'] = simplexml_load_string($xmlString);
-		$data['defaults']->location = $searchBox ?? 'Lagos (Nigeria)';
-		$data['defaults']->currency = '&#8358;';
-		$data['defaults']->guests = $guests;
-
-		// Render view
 		$data['content'] = $this->load->view('pages/home', $data, TRUE);
 		$this->load->view('layouts/master', $data);
 	}
 
+	/**
+	 * Autocomplete endpoint for city search
+	 */
 	public function autocomplete()
 	{
 		$term = $this->input->get('term', TRUE);
 
-		$this->db->like('name', $term);
-		$this->db->or_like('city_code', $term);
-		$this->db->or_like('country_code', $term);
-		$this->db->order_by('name', 'ASC')->limit(10);
-		$query = $this->db->get('cities');
+		if (empty($term)) {
+			$this->output->set_content_type('application/json')->set_output(json_encode([]));
+			return;
+		}
+
+		$cities = $this->city_model->search($term, 10);
 
 		$result = [];
-		foreach ($query->result() as $row) {
+		foreach ($cities as $row) {
 			$result[] = [
-				'id'    => $row->id,
+				'id' => $row->id,
 				'label' => $row->name . ' (' . $row->country_name . ')',
 				'value' => $row->name . ' (' . $row->country_name . ')'
 			];
 		}
 
-		echo json_encode($result);
+		$this->output
+			->set_content_type('application/json')
+			->set_output(json_encode($result));
 	}
-
-	public function getHotelDetails($hotelId)
-	{
-		$xmlString = "<HotelDetailsRequest>
-    <Authentication>
-        <AgentCode>CD33604</AgentCode>
-        <UserName>GOFLY1</UserName>
-    </Authentication>
-    <Hotels>
-        <HotelId>{$hotelId}</HotelId>
-    </Hotels>
-</HotelDetailsRequest>";
-
-		// Ensure application/xml directory exists
-		$dir = APPPATH . 'xml/';
-		if (!is_dir($dir)) {
-			if (!mkdir($dir, 0775, true)) {
-				die('❌ Failed to create directories...');
-			}
-		}
-
-		// Save request to file
-		$filePath = $dir . 'request' . time() . '.xml';
-		file_put_contents($filePath, $xmlString);
-
-		// Send request via cURL
-		$url = API_URL . 'gethoteldetails';
-		$headers = array('x-api-key: 20f3fdffd79b56d060f941fa4f0a9bda');
-
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL, $url);
-		curl_setopt($ch, CURLOPT_POST, 1);
-		curl_setopt($ch, CURLOPT_POSTFIELDS, "XML=" . urlencode($xmlString));
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-		$result = curl_exec($ch);
-		if ($result === false) {
-			log_message('error', 'Curl error: ' . curl_error($ch));
-			$data['apiResponse'] = null;
-		} else {
-			// Try to decode response if gzipped
-			$decoded = @gzdecode($result);
-			$xmlResponse = $decoded !== false ? $decoded : $result;
-
-			// Save response XML (optional)
-			$responsePath = $dir . 'response' . time() . '.xml';
-			file_put_contents($responsePath, $xmlResponse);
-
-			// Parse API response
-			$data['apiResponse'] = simplexml_load_string($xmlResponse);
-			if ($data['apiResponse'] === false) {
-				log_message('error', 'Failed to parse API response XML.');
-			}
-
-		}
-		curl_close($ch);
-
-		return $data['apiResponse'];
-	}
-
-
 }
