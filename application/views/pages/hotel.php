@@ -133,10 +133,20 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 						</form>
 					</div>
 				</div>
-				<div class="col-lg-12 mt-4 mb-4" data-aos="fade-up" data-aos-duration="1000">
+				<div class="col-lg-12 mt-4 mb-4" data-aos="fade-up" data-aos-duration="1000" id="mapSection">
 					<div class="map">
-						<img src="<?= base_url('assets/images/hotels-and-location/map-2.png') ?>" width="100%" height="auto"
-							 class="img-fluid" alt="">
+						<?php if (isset($hotelDetails->Latitude) && isset($hotelDetails->Longitude)): ?>
+							<iframe
+								width="100%"
+								height="300"
+								style="border:0; border-radius: 8px;"
+								loading="lazy"
+								allowfullscreen
+								src="https://maps.google.com/maps?q=<?= $hotelDetails->Latitude ?>,<?= $hotelDetails->Longitude ?>&z=15&output=embed">
+							</iframe>
+						<?php else: ?>
+							<img src="<?= base_url('assets/images/hotels-and-location/map-2.png') ?>" width="100%" height="auto" class="img-fluid" alt="">
+						<?php endif; ?>
 					</div>
 				</div>
 			</div>
@@ -211,7 +221,7 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 				</div>
 				<div class="col-md-12 d-none d-lg-block mt-3" data-aos="fade-up" data-aos-duration="1000">
 					<p><i class="ri-map-pin-line ri-lg"></i> <?= $hotelDetails->HotelAddress . ', ' . $hotelDetails->City . ' ' . $hotelDetails->Country ?></p>
-					<a href="https://www.google.com/maps/@<?= $hotelDetails->Latitude . ',' . $hotelDetails->Longitude . ',15z' ?>" class="small" target="_blank">Show on map</a>
+					<a href="#mapSection" class="small" onclick="document.getElementById('mapSection').scrollIntoView({ behavior: 'smooth' }); return false;">Show on map</a>
 				</div>
 				<!-- web -->
 				<div class="d-none d-lg-block">
@@ -434,7 +444,7 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 		<div class="col-lg-12 mt-3 d-none d-lg-block">
 			<!--  -->
 			<?php if (!empty($roomDetails)) {?>
-				<?php foreach ($roomDetails as $detail) {?>
+				<?php foreach ($roomDetails as $roomIndex => $detail) {?>
 					<div class="row p-3" data-aos="fade-up" data-aos-duration="1000">
 						<div class="col-lg-3">
 							<?php
@@ -518,10 +528,10 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 						<div class="col-lg text-start">
 							<div class="row">
 								<div class="col-4">
-									<div class="btn-group btn-group-sm" role="group" aria-label="Small button group">
-										<button type="button" class="btn btn-outline-dark rounded-0">-</button>
-										<button type="button" class="btn btn-outline-dark border-0">0</button>
-										<button type="button" class="btn btn-outline-dark rounded-0">+</button>
+									<div class="btn-group btn-group-sm" role="group" aria-label="Room quantity">
+										<button type="button" class="btn btn-outline-dark rounded-0" onclick="updateRoomQty('desktop_<?= $roomIndex ?>', -1)">-</button>
+										<button type="button" class="btn btn-outline-dark border-0" id="roomQtyDisplay_desktop_<?= $roomIndex ?>">1</button>
+										<button type="button" class="btn btn-outline-dark rounded-0" onclick="updateRoomQty('desktop_<?= $roomIndex ?>', 1)">+</button>
 									</div>
 								</div>
 								<div class="col-8 d-grid">
@@ -535,13 +545,13 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 										<input type="hidden" name="hotelId" value="<?= $hotelDetails->HotelId ?>">
 										<input type="hidden" name="hotelName" value="<?= $hotelDetails->HotelName ?? '' ?>">
 										<input type="hidden" name="price" value="<?= $detail->TotalRate ?>">
-										<input type="hidden" name="currency" value="<?= DISPLAY_CURRENCY ?>">
+										<input type="hidden" name="currency" value="<?= $apiCurrency ?>">
 										<input type="hidden" name="roomType" value="<?= $detail->Type ?>">
 										<input type="hidden" name="boardBasis" value="<?= $detail->BoardBasis ?>">
 										<input type="hidden" name="bookingKey" value="<?= $detail->BookingKey ?>">
 										<input type="hidden" name="adults" value="<?= $detail->Adults ?? 1 ?>">
 										<input type="hidden" name="children" value="<?= $detail->Children ?? 0 ?>">
-										<input type="hidden" name="totalRooms" value="<?= $detail->TotalRooms ?? 1 ?>">
+										<input type="hidden" name="totalRooms" id="totalRooms_desktop_<?= $roomIndex ?>" value="1">
 										<input type="hidden" name="totalRate" value="<?= $detail->TotalRate ?>">
 										<button type="submit" class="btn btn-primary rounded-0 ms-3">Reserve</button>
 									</form>
@@ -550,7 +560,8 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 											Confirmation is immediate.
 										</li>
 										<li>
-											<?= !empty($detail->TermsAndConditions) ? $detail->TermsAndConditions : 'No booking or credit card fees.' ?>
+											<?php $terms = isset($detail->TermsAndConditions) ? trim((string)$detail->TermsAndConditions) : ''; ?>
+											<?= $terms !== '' ? $terms : 'No booking or credit card fees.' ?>
 										</li>
 									</ul>
 								</div>
@@ -572,7 +583,7 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 		<div class="col-md-12 mt-4 d-lg-none">
 			<div class="card">
 				<?php if (!empty($roomDetails)) {?>
-					<?php foreach ($roomDetails as $detail) {?>
+					<?php foreach ($roomDetails as $mobileRoomIndex => $detail) {?>
 						<div class="card-body" data-aos="fade-up" data-aos-duration="1000">
 							<?php
 							$roomType = explode(',', $detail->Type);
@@ -645,10 +656,10 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 						<h6 class="fw-bold">Rooms</h6>
 						<div class="d-flex">
 							<div class="col-8">
-								<div class="btn-group btn-group-sm" role="group" aria-label="Small button group">
-									<button type="button" class="btn btn-outline-dark rounded-0 fw-bold">-</button>
-									<button type="button" class="btn btn-outline-dark border-0 fw-bold">0</button>
-									<button type="button" class="btn btn-outline-dark rounded-0 fw-bold">+</button>
+								<div class="btn-group btn-group-sm" role="group" aria-label="Room quantity">
+									<button type="button" class="btn btn-outline-dark rounded-0 fw-bold" onclick="updateRoomQty('mobile_<?= $mobileRoomIndex ?>', -1)">-</button>
+									<button type="button" class="btn btn-outline-dark border-0 fw-bold" id="roomQtyDisplay_mobile_<?= $mobileRoomIndex ?>">1</button>
+									<button type="button" class="btn btn-outline-dark rounded-0 fw-bold" onclick="updateRoomQty('mobile_<?= $mobileRoomIndex ?>', 1)">+</button>
 								</div>
 							</div>
 							<div class="col-4">
@@ -665,21 +676,22 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 								<input type="hidden" name="cityCode" value="<?= $hotelDetails->Hotels->CityCode ?>">
 								<input type="hidden" name="hotelId" value="<?= $hotelDetails->Hotels->HotelId ?>">
 								<input type="hidden" name="hotelName" value="<?= $hotelDetails->Hotels->HotelName ?? '' ?>">
-								<input type="hidden" name="price" value="<?= convertToNaira($detail->TotalRate, $apiCurrency) ?>">
-								<input type="hidden" name="currency" value="<?= DISPLAY_CURRENCY ?>">
+								<input type="hidden" name="price" value="<?= $detail->TotalRate ?>">
+								<input type="hidden" name="currency" value="<?= $apiCurrency ?>">
 								<input type="hidden" name="roomType" value="<?= $detail->Type ?>">
 								<input type="hidden" name="boardBasis" value="<?= $detail->BoardBasis ?>">
 								<input type="hidden" name="bookingKey" value="<?= $detail->BookingKey ?>">
 								<input type="hidden" name="adults" value="<?= $detail->Adults ?? 1 ?>">
 								<input type="hidden" name="children" value="<?= $detail->Children ?? 0 ?>">
-								<input type="hidden" name="totalRooms" value="<?= $detail->TotalRooms ?? 1 ?>">
-								<input type="hidden" name="totalRate" value="<?= convertToNaira($detail->TotalRate, $apiCurrency) ?>">
+								<input type="hidden" name="totalRooms" id="totalRooms_mobile_<?= $mobileRoomIndex ?>" value="1">
+								<input type="hidden" name="totalRate" value="<?= $detail->TotalRate ?>">
 								<button type="submit" class="btn btn-primary px-5 rounded-0 fw-bold">Reserve</button>
 							</form>
 
 							<ul class="mt-3 ms-n3 lh-1">
 								<li>Confirmation is immediate.</li>
-								<li><?= $detail->TermsAndConditions ?? 'No booking or credit card fees.' ?></li>
+								<?php $termsMobile = isset($detail->TermsAndConditions) ? trim((string)$detail->TermsAndConditions) : ''; ?>
+								<li><?= $termsMobile !== '' ? $termsMobile : 'No booking or credit card fees.' ?></li>
 							</ul>
 						</div>
 						<div class="col-md-12 mt-3">
@@ -1450,3 +1462,29 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 	</div>
 </section>
 <!-- similar hotels -->
+
+<script>
+/**
+ * Update room quantity for a specific room
+ * @param {string} id - Unique identifier for the room (e.g., 'desktop_0', 'mobile_1')
+ * @param {number} change - Amount to change (+1 or -1)
+ */
+function updateRoomQty(id, change) {
+    var displayEl = document.getElementById('roomQtyDisplay_' + id);
+    var inputEl = document.getElementById('totalRooms_' + id);
+
+    if (!displayEl || !inputEl) return;
+
+    var currentValue = parseInt(displayEl.textContent) || 1;
+    var newValue = currentValue + change;
+
+    // Ensure value is at least 1
+    if (newValue < 1) {
+        newValue = 1;
+    }
+
+    // Update display and hidden input
+    displayEl.textContent = newValue;
+    inputEl.value = newValue;
+}
+</script>

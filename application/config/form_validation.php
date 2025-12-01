@@ -1,164 +1,132 @@
-<?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+<?php  if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
 /**
  * Form Validation Configuration
  * Define validation rules for different forms
  */
 
-$config = [
+$config = array(
 	// Hotel search form validation
-	'hotel_search' => [
-		[
+	'hotel_search' => array(
+		array(
 			'field' => 'searchBox',
 			'label' => 'Location',
 			'rules' => 'trim|max_length[200]'
-		],
-		[
+		),
+		array(
 			'field' => 'checkIn',
 			'label' => 'Check-in Date',
-			'rules' => 'required|regex_match[/^\d{4}-\d{2}-\d{2}$/]',
-			'errors' => [
-				'required' => 'Please select a check-in date.',
-				'regex_match' => 'Invalid date format.'
-			]
-		],
-		[
+			'rules' => 'required'
+		),
+		array(
 			'field' => 'checkOut',
 			'label' => 'Check-out Date',
-			'rules' => 'required|regex_match[/^\d{4}-\d{2}-\d{2}$/]',
-			'errors' => [
-				'required' => 'Please select a check-out date.',
-				'regex_match' => 'Invalid date format.'
-			]
-		],
-		[
+			'rules' => 'required'
+		),
+		array(
 			'field' => 'guests',
 			'label' => 'Guests',
-			'rules' => 'trim|regex_match[/^\d+,\d+,\d+$/]',
-			'errors' => [
-				'regex_match' => 'Invalid guest format.'
-			]
-		]
-	],
+			'rules' => 'trim'
+		)
+	),
 
 	// Hotel details form validation
-	'hotel_details' => [
-		[
-			'field' => 'hotelId',
-			'label' => 'Hotel ID',
-			'rules' => 'required|integer',
-			'errors' => [
-				'required' => 'Hotel ID is required.',
-				'integer' => 'Invalid hotel ID.'
-			]
-		],
-		[
-			'field' => 'arrival',
-			'label' => 'Arrival Date',
-			'rules' => 'required|regex_match[/^\d{4}-\d{2}-\d{2}$/]'
-		],
-		[
-			'field' => 'departure',
-			'label' => 'Departure Date',
-			'rules' => 'required|regex_match[/^\d{4}-\d{2}-\d{2}$/]'
-		]
-	],
-
-	// Booking form validation
-	'booking' => [
-		[
-			'field' => 'searchSessionId',
-			'label' => 'Session ID',
-			'rules' => 'trim|alpha_numeric'
-		],
-		[
+	'hotel_details' => array(
+		array(
 			'field' => 'hotelId',
 			'label' => 'Hotel ID',
 			'rules' => 'required|integer'
-		],
-		[
+		),
+		array(
+			'field' => 'arrival',
+			'label' => 'Arrival Date',
+			'rules' => 'required'
+		),
+		array(
+			'field' => 'departure',
+			'label' => 'Departure Date',
+			'rules' => 'required'
+		)
+	),
+
+	// Booking form validation
+	'booking' => array(
+		array(
+			'field' => 'searchSessionId',
+			'label' => 'Session ID',
+			'rules' => 'trim|alpha_numeric'
+		),
+		array(
+			'field' => 'hotelId',
+			'label' => 'Hotel ID',
+			'rules' => 'required|integer'
+		),
+		array(
 			'field' => 'arrivalDate',
 			'label' => 'Arrival Date',
-			'rules' => 'required|regex_match[/^\d{4}-\d{2}-\d{2}$/]'
-		],
-		[
+			'rules' => 'required'
+		),
+		array(
 			'field' => 'departureDate',
 			'label' => 'Departure Date',
-			'rules' => 'required|regex_match[/^\d{4}-\d{2}-\d{2}$/]'
-		],
-		[
+			'rules' => 'required'
+		),
+		array(
 			'field' => 'totalRate',
 			'label' => 'Total Rate',
 			'rules' => 'required|numeric|greater_than[0]'
-		],
-		[
+		),
+		array(
 			'field' => 'currency',
 			'label' => 'Currency',
 			'rules' => 'required|alpha|exact_length[3]'
-		],
-		[
+		),
+		array(
 			'field' => 'adults',
 			'label' => 'Adults',
 			'rules' => 'required|integer|greater_than[0]'
-		],
-		[
+		),
+		array(
 			'field' => 'children',
 			'label' => 'Children',
-			'rules' => 'required|integer|greater_than_equal_to[0]'
-		],
-		[
+			'rules' => 'required|integer'
+		),
+		array(
 			'field' => 'totalRooms',
 			'label' => 'Total Rooms',
 			'rules' => 'required|integer|greater_than[0]'
-		]
-	],
+		)
+	),
 
 	// Guest details form validation (for final booking)
-	'guest_details' => [
-		[
+	'guest_details' => array(
+		array(
 			'field' => 'firstName',
 			'label' => 'First Name',
-			'rules' => 'required|trim|min_length[2]|max_length[50]|alpha_numeric_spaces',
-			'errors' => [
-				'required' => 'Please enter your first name.',
-				'min_length' => 'First name must be at least 2 characters.',
-				'alpha_numeric_spaces' => 'First name can only contain letters, numbers and spaces.'
-			]
-		],
-		[
+			'rules' => 'required|trim|min_length[2]|max_length[50]|alpha'
+		),
+		array(
 			'field' => 'lastName',
 			'label' => 'Last Name',
-			'rules' => 'required|trim|min_length[2]|max_length[50]|alpha_numeric_spaces',
-			'errors' => [
-				'required' => 'Please enter your last name.',
-				'min_length' => 'Last name must be at least 2 characters.'
-			]
-		],
-		[
+			'rules' => 'required|trim|min_length[2]|max_length[50]|alpha'
+		),
+		array(
 			'field' => 'email',
 			'label' => 'Email',
-			'rules' => 'required|trim|valid_email|max_length[100]',
-			'errors' => [
-				'required' => 'Please enter your email address.',
-				'valid_email' => 'Please enter a valid email address.'
-			]
-		],
-		[
+			'rules' => 'required|trim|valid_email|max_length[100]'
+		),
+		array(
 			'field' => 'confirmEmail',
 			'label' => 'Confirm Email',
-			'rules' => 'required|trim|matches[email]',
-			'errors' => [
-				'matches' => 'Email addresses do not match.'
-			]
-		],
-		[
+			'rules' => 'required|trim|matches[email]'
+		),
+		array(
 			'field' => 'phone',
 			'label' => 'Phone Number',
-			'rules' => 'trim|min_length[10]|max_length[20]|regex_match[/^[\d\s\+\-\(\)]+$/]',
-			'errors' => [
-				'regex_match' => 'Please enter a valid phone number.'
-			]
-		]
-	]
-];
+			'rules' => 'trim|min_length[10]|max_length[20]'
+		)
+	)
+);
+
+/* End of file form_validation.php */
+/* Location: ./application/config/form_validation.php */

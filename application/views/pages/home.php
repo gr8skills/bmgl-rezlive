@@ -1117,13 +1117,10 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 					</div>
 				</div>
 
-				<div class="col-lg-12 mt-4" data-aos="fade-up" data-aos-duration="1000">
+				<div class="col-lg-12 mt-4" data-aos="fade-up" data-aos-duration="1000" id="mapSection">
 					<div class="map position-relative">
 						<img src="<?= base_url('assets/images/hotels-and-location/map-2.png') ?>" width="100%" height="auto"
 							 class="img-fluid" alt="">
-						<div class="position-absolute top-50 start-50 translate-middle">
-							<a href="hotel-2.html" class="btn btn-primary btn-lg">Show on map</a>
-						</div>
 					</div>
 				</div>
 			</div>
@@ -1188,15 +1185,15 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 							$hotelPrice = convertToNaira($hotelPriceUsd, $apiCurrency);
 							$taxAmount = $hotelPrice * 0.05;
 
-							// Get rating label
+							// Get rating label (scale 0-5)
 							$rating = isset($hotel->Rating) ? (float)$hotel->Rating : 0;
-							if ($rating >= 9) {
+							if ($rating >= 4.5) {
 								$ratingLabel = 'Exceptional';
-							} elseif ($rating >= 8) {
+							} elseif ($rating >= 4) {
 								$ratingLabel = 'Excellent';
-							} elseif ($rating >= 7) {
+							} elseif ($rating >= 3.5) {
 								$ratingLabel = 'Very Good';
-							} elseif ($rating >= 6) {
+							} elseif ($rating >= 3) {
 								$ratingLabel = 'Good';
 							} else {
 								$ratingLabel = 'Pleasant';
@@ -1239,11 +1236,7 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 													<div class="row">
 														<div class="mt-2">
 															<a href="#" class="me-1 text-decoration-underline"><?= htmlspecialchars($defaults->location) ?></a> &bull;
-															<?php if (isset($hotel->Latitude) && isset($hotel->Longitude)): ?>
-																<a href="https://www.google.com/maps/@<?= $hotel->Latitude ?>,<?= $hotel->Longitude ?>,15z" class="mx-1 text-decoration-underline" target="_blank">Show on map</a>
-															<?php else: ?>
-																<span class="mx-1">Show on map</span>
-															<?php endif; ?>
+																<a href="#mapSection" class="mx-1 text-decoration-underline" onclick="document.getElementById('mapSection').scrollIntoView({ behavior: 'smooth' }); return false;">Show on map</a>
 															&bull;
 															<span class="small mx-1"><?= isset($hotel->DistanceFromCenter) ? $hotel->DistanceFromCenter : '' ?> from center</span>
 														</div>

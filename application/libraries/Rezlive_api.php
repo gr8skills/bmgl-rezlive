@@ -1,5 +1,4 @@
-<?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+<?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 
 /**
  * Rezlive API Library
@@ -16,6 +15,7 @@ class Rezlive_api
 	protected $connectTimeout = 30;
 	protected $cacheExpiry = 3600; // 1 hour cache
 	protected $xmlDir;
+	protected $cacheDir;
 
 	public function __construct()
 	{
@@ -25,9 +25,51 @@ class Rezlive_api
 		$this->agentCode = AGENT_CODE;
 		$this->agentUsername = AGENT_USERNAME;
 		$this->xmlDir = APPPATH . 'xml/';
+		$this->cacheDir = APPPATH . 'cache/';
 
-		// Load cache driver
-		$this->CI->load->driver('cache', ['adapter' => 'file', 'backup' => 'file']);
+		// Ensure cache directory exists
+		if (!is_dir($this->cacheDir)) {
+			@mkdir($this->cacheDir, 0775, true);
+		}
+	}
+
+	/**
+	 * Simple file-based cache get
+	 * @param string $key Cache key
+	 * @return mixed|false Cached data or false if not found
+	 */
+	protected function cache_get($key)
+	{
+		$file = $this->cacheDir . md5($key) . '.cache';
+		if (file_exists($file)) {
+			$data = @file_get_contents($file);
+			if ($data !== false) {
+				$cached = @unserialize($data);
+				if ($cached !== false && isset($cached['expires']) && $cached['expires'] > time()) {
+					return $cached['data'];
+				}
+				// Expired, delete file
+				@unlink($file);
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Simple file-based cache save
+	 * @param string $key Cache key
+	 * @param mixed $data Data to cache
+	 * @param int $ttl Time to live in seconds
+	 * @return bool Success
+	 */
+	protected function cache_save($key, $data, $ttl = 3600)
+	{
+		$file = $this->cacheDir . md5($key) . '.cache';
+		$cached = array(
+			'expires' => time() + $ttl,
+			'data' => $data
+		);
+		return @file_put_contents($file, serialize($cached)) !== false;
 	}
 
 	/**
@@ -42,7 +84,7 @@ class Rezlive_api
 		// Check cache first
 		$cacheKey = 'rezlive_' . md5($endpoint . $xmlString);
 		if ($useCache) {
-			$cached = $this->CI->cache->get($cacheKey);
+			$cached = $this->cache_get($cacheKey);
 			if ($cached !== false) {
 				return simplexml_load_string($cached);
 			}
@@ -53,10 +95,10 @@ class Rezlive_api
 
 		// Make API call
 		$url = $this->apiUrl . $endpoint;
-		$headers = ['x-api-key: ' . $this->apiKey];
+		$headers = array('x-api-key: ' . $this->apiKey);
 
 		$ch = curl_init();
-		curl_setopt_array($ch, [
+		curl_setopt_array($ch, array(
 			CURLOPT_URL => $url,
 			CURLOPT_POST => 1,
 			CURLOPT_POSTFIELDS => "XML=" . urlencode($xmlString),
@@ -65,7 +107,7 @@ class Rezlive_api
 			CURLOPT_HTTPHEADER => $headers,
 			CURLOPT_TIMEOUT => $this->timeout,
 			CURLOPT_CONNECTTIMEOUT => $this->connectTimeout,
-		]);
+		));
 
 		$result = curl_exec($ch);
 		$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -77,9 +119,13 @@ class Rezlive_api
 			return null;
 		}
 
-		// Decode if gzipped
-		$decoded = @gzdecode($result);
-		$xmlResponse = $decoded !== false ? $decoded : $result;
+		// Decode if gzipped (check for gzip magic bytes \x1f\x8b)
+		if (strlen($result) >= 2 && substr($result, 0, 2) === "\x1f\x8b") {
+			$decoded = @gzdecode($result);
+			$xmlResponse = $decoded !== false ? $decoded : $result;
+		} else {
+			$xmlResponse = $result;
+		}
 
 		// Clean response
 		$xmlResponse = trim($xmlResponse);
@@ -101,7 +147,7 @@ class Rezlive_api
 
 		// Cache successful response
 		if ($useCache && $parsed !== null) {
-			$this->CI->cache->save($cacheKey, $xmlResponse, $this->cacheExpiry);
+			$this->cache_save($cacheKey, $xmlResponse, $this->cacheExpiry);
 		}
 
 		return $parsed;
@@ -126,7 +172,7 @@ class Rezlive_api
 	 */
 	public function findHotels($params)
 	{
-		$defaults = [
+		$defaults = array(
 			'arrivalDate' => date('d/m/Y'),
 			'departureDate' => date('d/m/Y', strtotime('+1 day')),
 			'countryCode' => DEFAULT_COUNTRY_CODE,
@@ -137,14 +183,18 @@ class Rezlive_api
 			'rooms' => 1,
 			'childrenAges' => '',
 			'hotelIds' => null,
-		];
+		);
 
 		$params = array_merge($defaults, $params);
 
 		$hotelIdsXml = '';
 		if (!empty($params['hotelIds'])) {
-			$ids = is_array($params['hotelIds']) ? $params['hotelIds'] : [$params['hotelIds']];
-			$hotelIdsXml = "<HotelIDs>" . implode('', array_map(fn($id) => "<Int>{$id}</Int>", $ids)) . "</HotelIDs>";
+			$ids = is_array($params['hotelIds']) ? $params['hotelIds'] : array($params['hotelIds']);
+			$idsXml = '';
+			foreach ($ids as $id) {
+				$idsXml .= "<Int>{$id}</Int>";
+			}
+			$hotelIdsXml = "<HotelIDs>" . $idsXml . "</HotelIDs>";
 		}
 
 		$xmlString = "<HotelFindRequest>
@@ -202,9 +252,9 @@ class Rezlive_api
 	 */
 	public function preBook($params)
 	{
-		$required = ['searchSessionId', 'arrivalDate', 'departureDate', 'countryCode',
+		$required = array('searchSessionId', 'arrivalDate', 'departureDate', 'countryCode',
 			'cityCode', 'hotelId', 'totalRate', 'currency', 'roomType',
-			'boardBasis', 'bookingKey', 'adults', 'children', 'totalRooms', 'rates'];
+			'boardBasis', 'bookingKey', 'adults', 'children', 'totalRooms', 'rates');
 
 		foreach ($required as $field) {
 			if (!isset($params[$field])) {
@@ -213,7 +263,7 @@ class Rezlive_api
 			}
 		}
 
-		$childrenAges = $params['childrenAges'] ?? '<ChildrenAges></ChildrenAges>';
+		$childrenAges = isset($params['childrenAges']) ? $params['childrenAges'] : '<ChildrenAges></ChildrenAges>';
 
 		$xmlString = "<PreBookingRequest>
     {$this->getAuthXml()}
@@ -266,7 +316,7 @@ class Rezlive_api
 	public function getExchangeRate()
 	{
 		$cacheKey = 'exchange_rate_usd_ngn';
-		$cached = $this->CI->cache->get($cacheKey);
+		$cached = $this->cache_get($cacheKey);
 
 		if ($cached !== false) {
 			return (float)$cached;
@@ -274,12 +324,12 @@ class Rezlive_api
 
 		try {
 			$ch = curl_init();
-			curl_setopt_array($ch, [
+			curl_setopt_array($ch, array(
 				CURLOPT_URL => 'https://open.er-api.com/v6/latest/USD',
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_TIMEOUT => 10,
 				CURLOPT_CONNECTTIMEOUT => 5,
-			]);
+			));
 
 			$response = curl_exec($ch);
 			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -290,7 +340,7 @@ class Rezlive_api
 				if (isset($data['rates']['NGN'])) {
 					$rate = (float)$data['rates']['NGN'];
 					// Cache for 6 hours
-					$this->CI->cache->save($cacheKey, $rate, 21600);
+					$this->cache_save($cacheKey, $rate, 21600);
 					return $rate;
 				}
 			}
@@ -301,3 +351,6 @@ class Rezlive_api
 		return 1;
 	}
 }
+
+/* End of file Rezlive_api.php */
+/* Location: ./application/libraries/Rezlive_api.php */

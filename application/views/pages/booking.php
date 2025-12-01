@@ -207,15 +207,15 @@
 			<div class="col-lg-8 order-lg-1 order-1">
 				<!--  -->
 				<?php
-				// Get hotel rating info
+				// Get hotel rating info (scale 0-5)
 				$hotelRating = isset($hotelDetails->Rating) ? (float)$hotelDetails->Rating : 0;
-				if ($hotelRating >= 9) {
+				if ($hotelRating >= 4.5) {
 					$ratingLabel = 'Exceptional';
-				} elseif ($hotelRating >= 8) {
+				} elseif ($hotelRating >= 4) {
 					$ratingLabel = 'Excellent';
-				} elseif ($hotelRating >= 7) {
+				} elseif ($hotelRating >= 3.5) {
 					$ratingLabel = 'Very Good';
-				} elseif ($hotelRating >= 6) {
+				} elseif ($hotelRating >= 3) {
 					$ratingLabel = 'Good';
 				} else {
 					$ratingLabel = 'Pleasant';
