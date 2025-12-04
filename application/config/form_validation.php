@@ -101,14 +101,19 @@ $config = array(
 	// Guest details form validation (for final booking)
 	'guest_details' => array(
 		array(
+			'field' => 'salutation',
+			'label' => 'Title',
+			'rules' => 'trim'
+		),
+		array(
 			'field' => 'firstName',
 			'label' => 'First Name',
-			'rules' => 'required|trim|min_length[2]|max_length[50]|alpha'
+			'rules' => 'required|trim|min_length[2]|max_length[50]'
 		),
 		array(
 			'field' => 'lastName',
 			'label' => 'Last Name',
-			'rules' => 'required|trim|min_length[2]|max_length[50]|alpha'
+			'rules' => 'required|trim|min_length[2]|max_length[50]'
 		),
 		array(
 			'field' => 'email',
@@ -123,7 +128,7 @@ $config = array(
 		array(
 			'field' => 'phone',
 			'label' => 'Phone Number',
-			'rules' => 'trim|min_length[10]|max_length[20]'
+			'rules' => 'required|trim|min_length[10]|max_length[20]'
 		)
 	)
 );

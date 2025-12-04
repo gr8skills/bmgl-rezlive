@@ -1,0 +1,37 @@
+<BookingRequest>
+    <Authentication>
+        <AgentCode>CD33604</AgentCode>
+        <UserName>GOFLY1</UserName>
+    </Authentication>
+    <Booking>
+        <SearchSessionId>176486339825717648633981706931</SearchSessionId>
+        <AgentRefNo>bmgl-6931addcc4f00-1764863452</AgentRefNo>
+        <ArrivalDate>04/12/2025</ArrivalDate>
+        <DepartureDate>09/12/2025</DepartureDate>
+        <GuestNationality>NG</GuestNationality>
+        <CountryCode>NG</CountryCode>
+        <City>31606</City>
+        <HotelId>721593</HotelId>
+        <Name>Silver Grandeur Hotel</Name>
+        <Currency>USD</Currency>
+        <RoomDetails>
+            <RoomDetail>
+                <Type>Deluxe Room, 1 Queen Bed</Type>
+                <BookingKey>Pce5EQAgDAOwiXwXO-TbgBHYgf17OtSJlavTfVpR_GFZjhNnswMGmQIUbKHEGMd9</BookingKey>
+                <Adults>1</Adults>
+                <Children>0</Children>
+                <ChildrenAges></ChildrenAges>
+                <TotalRooms>1</TotalRooms>
+                <TotalRate>122.6652000</TotalRate>
+                <BoardBasis>Room Only</BoardBasis>
+                <Guests>
+                    <Guest>
+                        <Salutation>Mr</Salutation>
+                        <FirstName>TEMITOPE</FirstName>
+                        <LastName>JOSEPH</LastName>
+                    </Guest>
+                </Guests>
+            </RoomDetail>
+        </RoomDetails>
+    </Booking>
+</BookingRequest>

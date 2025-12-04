@@ -337,16 +337,19 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 		<div class="row mt-5">
 			<div class="col-lg-8" data-aos="fade-up" data-aos-duration="1000">
 				<p>
-					<?= !empty($hotelDetails->Description) ? $hotelDetails->Description : "Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown
-					printer took a galley of type and scrambled it to make a type specimen book. It has survived not
-					only five centuries, but also the leap into electronic typesetting, remaining essentially
-					unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem
-					Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown
-					printer took a galley of type and scrambled it to make a type specimen book. It has survived not
-					only five centuries, but also the leap into electronic typesetting, remaining essentially
-					unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem
-					Lorem Ipsum has been the industry's standard dummy text ever since" ?>
-					</p>
+					<?php
+								$description = isset($hotelDetails->Description) ? trim((string)$hotelDetails->Description) : '';
+								$defaultDescription = "Hotel booking in Lagos offers an incredible range of options to suit every taste and budget, making it a fantastic experience. From luxurious five-star beachfront resorts on Victoria Island and sleek business hotels in Ikoyi to affordable, stylish apartments in Lekki, the city caters to all. The competitive market means excellent value, with modern amenities often standard. The rise of user-friendly online platforms and apps has made searching, comparing, and securing the perfect stay effortless, often with instant confirmation. Furthermore, strategic bookings provide easy access to Lagos's vibrant business hubs, energetic nightlife, rich cultural scenes, and stunning Atlantic coastline. Whether visiting for work or leisure, finding a convenient, comfortable, and well-priced base in Nigeria's dynamic megacity has never been easier or more rewarding.";
+								$fullDescription = $description !== '' ? $description : $defaultDescription;
+								$charLimit = 700;
+								$isLong = strlen($fullDescription) > $charLimit;
+								$displayDescription = $isLong ? substr($fullDescription, 0, $charLimit) . '...' : $fullDescription;
+								echo $displayDescription;
+							?>
+					<?php if ($isLong): ?>
+						<a href="#" class="text-primary text-decoration-underline" data-bs-toggle="modal" data-bs-target="#descriptionModal">Read more</a>
+					<?php endif; ?>
+				</p>
 			</div>
 			<div class="col-lg-4">
 				<div class="card border-0" data-aos="fade-up" data-aos-duration="1000">
@@ -1462,6 +1465,24 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 	</div>
 </section>
 <!-- similar hotels -->
+
+<!-- Description Modal -->
+<div class="modal fade" id="descriptionModal" tabindex="-1" aria-labelledby="descriptionModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+		<div class="modal-content">
+			<div class="modal-header bg-warning">
+				<h5 class="modal-title fw-bold" id="descriptionModalLabel">About <?= htmlspecialchars($defaults->hotelName) ?></h5>
+				<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			</div>
+			<div class="modal-body">
+				<p><?= $fullDescription ?></p>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+			</div>
+		</div>
+	</div>
+</div>
 
 <script>
 /**

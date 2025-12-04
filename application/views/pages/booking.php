@@ -118,7 +118,7 @@
 							<div class="col-lg-12 mt-3">
 								<p class="small fw-bold">You selected:</p>
 								<h5 class="fw-bold"><?= $apiResponse?$apiResponse->roomType : $default->roomType ?></h5>
-								<a href="#" class="text-decoration-none fw-bold small">Change your selection</a>
+								<a href="<?= site_url('hotel/index') ?>" class="text-decoration-none fw-bold small">Change your selection</a>
 							</div>
 						</div>
 					</div>
@@ -312,133 +312,150 @@
 				<!--  -->
 
 				<!--  -->
-				<div class="bg-secondary mt-5 p-4">
-					<div class="col-lg-12">
-						<h5 class="fw-bold" data-aos="fade-up" data-aos-duration="1000">Enter your details</h5>
-
-						<form action="" data-aos="fade-up" data-aos-duration="1000">
-							<div class="row">
-								<div class="col">
-									<label for="inputFirstName" class="form-label fw-bold">First Name <sup
-											class="text-danger">*</sup></label>
-									<input type="text" class="form-control rounded-0 border-0"
-										   aria-label="First name">
-								</div>
-								<div class="col">
-									<label for="inputLastName" class="form-label fw-bold">Last Name <sup
-											class="text-danger">*</sup></label>
-									<input type="text" class="form-control rounded-0 border-0"
-										   aria-label="Last name">
-								</div>
-							</div>
-
-							<div class="row mt-4">
-								<div class="col">
-									<label for="inputEmail" class="form-label fw-bold">Email</label>
-									<input type="email" class="form-control rounded-0 border-0" aria-label="Email">
-								</div>
-								<div class="col">
-									<label for="inputConfirmEmail" class="form-label fw-bold">Confirm Email</label>
-									<input type="text" class="form-control rounded-0 border-0"
-										   aria-label="Confirm Email">
-								</div>
-							</div>
-
-							<div class="row mt-3">
-								<p class="fw-bold">Who are you booking for?</p>
-							</div>
-
-							<div class="form-check">
-								<input class="form-check-input" type="radio" name="flexRadioDefault"
-									   id="flexRadioDefault1" checked>
-								<label class="form-check-label small" for="flexRadioDefault1">
-									I am the main guest
-								</label>
-							</div>
-
-							<div class="form-check">
-								<input class="form-check-input" type="radio" name="flexRadioDefault"
-									   id="flexRadioDefault1">
-								<label class="form-check-label small" for="flexRadioDefault1">
-									I am booking for someone else
-								</label>
-							</div>
-						</form>
+				<?php if ($this->session->flashdata('error')): ?>
+					<div class="alert alert-danger mt-3" role="alert">
+						<?= $this->session->flashdata('error') ?>
 					</div>
-				</div>
-				<!--  -->
+				<?php endif; ?>
 
-				<!--  -->
-				<div class="bg-secondary mt-5 p-4" data-aos="fade-up" data-aos-duration="1000">
-					<div class="col-lg-12">
-						<h5 class="fw-bold">special request</h5>
-						<p class="small">Special requests can't be guaranteed, but the property will do its best to
-							meet your needs. You can always make a special request after your booking is complete
-						</p>
+				<form action="<?= site_url('booking/confirm') ?>" method="post" id="bookingForm">
+					<input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
 
-						<form action="">
-							<div class="col">
-                                    <textarea class="form-control rounded-0 border-0" id="exampleFormControlTextarea1"
-											  rows="5"></textarea>
+					<div class="bg-secondary mt-5 p-4">
+						<div class="col-lg-12">
+							<h5 class="fw-bold" data-aos="fade-up" data-aos-duration="1000">Enter your details</h5>
+
+							<div data-aos="fade-up" data-aos-duration="1000">
+								<div class="row">
+									<div class="col-lg-2 col-md-3 col-4">
+										<label for="salutation" class="form-label fw-bold">Title</label>
+										<select class="form-select rounded-0 border-0" name="salutation" id="salutation">
+											<option value="Mr" selected>Mr</option>
+											<option value="Ms">Ms</option>
+											<option value="Mrs">Mrs</option>
+											<option value="Dr">Dr</option>
+										</select>
+									</div>
+									<div class="col-lg-5 col-md-4 col-8">
+										<label for="firstName" class="form-label fw-bold">First Name <sup class="text-danger">*</sup></label>
+										<input type="text" class="form-control rounded-0 border-0" name="firstName" id="firstName" required aria-label="First name" value="<?= set_value('firstName') ?>">
+									</div>
+									<div class="col-lg-5 col-md-5">
+										<label for="lastName" class="form-label fw-bold">Last Name <sup class="text-danger">*</sup></label>
+										<input type="text" class="form-control rounded-0 border-0" name="lastName" id="lastName" required aria-label="Last name" value="<?= set_value('lastName') ?>">
+									</div>
+								</div>
+
+								<div class="row mt-4">
+									<div class="col-lg-6">
+										<label for="email" class="form-label fw-bold">Email <sup class="text-danger">*</sup></label>
+										<input type="email" class="form-control rounded-0 border-0" name="email" id="email" required aria-label="Email" value="<?= set_value('email') ?>">
+									</div>
+									<div class="col-lg-6">
+										<label for="confirmEmail" class="form-label fw-bold">Confirm Email <sup class="text-danger">*</sup></label>
+										<input type="email" class="form-control rounded-0 border-0" name="confirmEmail" id="confirmEmail" required aria-label="Confirm Email" value="<?= set_value('confirmEmail') ?>">
+									</div>
+								</div>
+
+								<div class="row mt-4">
+									<div class="col-lg-6">
+										<label for="phone" class="form-label fw-bold">Phone Number <sup class="text-danger">*</sup></label>
+										<input type="tel" class="form-control rounded-0 border-0" name="phone" id="phone" required aria-label="Phone" placeholder="+234 xxx xxx xxxx" value="<?= set_value('phone') ?>">
+									</div>
+								</div>
+
+								<div class="row mt-4">
+									<p class="fw-bold">Who are you booking for?</p>
+								</div>
+
+								<div class="form-check">
+									<input class="form-check-input" type="radio" name="bookingFor" id="bookingForSelf" value="self" checked>
+									<label class="form-check-label small" for="bookingForSelf">
+										I am the main guest
+									</label>
+								</div>
+
+								<div class="form-check">
+									<input class="form-check-input" type="radio" name="bookingFor" id="bookingForOther" value="other">
+									<label class="form-check-label small" for="bookingForOther">
+										I am booking for someone else
+									</label>
+								</div>
 							</div>
-						</form>
-					</div>
-				</div>
-				<!--  -->
-
-				<div class="row" data-aos="fade-up" data-aos-duration="1000">
-					<div class="col-lg-6 mt-5">
-						<h5 class="fw-bold">Your arrival time</h5>
-						<p class="small"><i class="ri-checkbox-circle-line ri-lg text-success"></i> Your room will be ready for check-in by <?= isset($hotelDetails->CheckInTime) ? htmlspecialchars($hotelDetails->CheckInTime) : '2:00 PM' ?></p>
-						<p class="small"><i class="ri-24-hours-line ri-lg text-success"></i> 24 hour desk help whenever you need</p>
-					</div>
-
-					<div class="col-lg-6 mt-5">
-						<h6><b>Add your estimated arrival time</b> (optional)</h6>
-						<div class="col-lg-5">
-							<select class="form-select" name="arrivalTime" aria-label="Estimated arrival time">
-								<option value="" selected>Please select</option>
-								<option value="00:00-01:00">12:00 AM - 1:00 AM</option>
-								<option value="01:00-02:00">1:00 AM - 2:00 AM</option>
-								<option value="02:00-03:00">2:00 AM - 3:00 AM</option>
-								<option value="03:00-04:00">3:00 AM - 4:00 AM</option>
-								<option value="04:00-05:00">4:00 AM - 5:00 AM</option>
-								<option value="05:00-06:00">5:00 AM - 6:00 AM</option>
-								<option value="06:00-07:00">6:00 AM - 7:00 AM</option>
-								<option value="07:00-08:00">7:00 AM - 8:00 AM</option>
-								<option value="08:00-09:00">8:00 AM - 9:00 AM</option>
-								<option value="09:00-10:00">9:00 AM - 10:00 AM</option>
-								<option value="10:00-11:00">10:00 AM - 11:00 AM</option>
-								<option value="11:00-12:00">11:00 AM - 12:00 PM</option>
-								<option value="12:00-13:00">12:00 PM - 1:00 PM</option>
-								<option value="13:00-14:00">1:00 PM - 2:00 PM</option>
-								<option value="14:00-15:00">2:00 PM - 3:00 PM</option>
-								<option value="15:00-16:00">3:00 PM - 4:00 PM</option>
-								<option value="16:00-17:00">4:00 PM - 5:00 PM</option>
-								<option value="17:00-18:00">5:00 PM - 6:00 PM</option>
-								<option value="18:00-19:00">6:00 PM - 7:00 PM</option>
-								<option value="19:00-20:00">7:00 PM - 8:00 PM</option>
-								<option value="20:00-21:00">8:00 PM - 9:00 PM</option>
-								<option value="21:00-22:00">9:00 PM - 10:00 PM</option>
-								<option value="22:00-23:00">10:00 PM - 11:00 PM</option>
-								<option value="23:00-00:00">11:00 PM - 12:00 AM</option>
-							</select>
 						</div>
 					</div>
-				</div>
+					<!--  -->
 
-				<div class="col-lg-12 mt-3" data-aos="fade-up" data-aos-duration="1000">
-					<div class="d-grid d-md-flex justify-content-md-end">
-						<form action="<?= site_url('booking/confirm') ?>" method="post">
-							<input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
-							<input type="hidden" name="hotelId" value="<?= htmlspecialchars($default->hotelId) ?>">
-							<input type="hidden" name="hotelName" value="<?= htmlspecialchars($default->hotelName) ?>">
-							<input type="hidden" name="totalAmount" value="<?= $total ?>">
-							<input type="hidden" name="currency" value="<?= htmlspecialchars($default->currency) ?>">
-							<button type="submit" class="btn btn-warning fw-bold btn-lg px-5">Pay <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($total, 2) ?> Now</button>
-						</form>
+					<!--  -->
+					<div class="bg-secondary mt-5 p-4" data-aos="fade-up" data-aos-duration="1000">
+						<div class="col-lg-12">
+							<h5 class="fw-bold">Special request</h5>
+							<p class="small">Special requests can't be guaranteed, but the property will do its best to
+								meet your needs. You can always make a special request after your booking is complete
+							</p>
+
+							<div class="col">
+								<textarea class="form-control rounded-0 border-0" name="specialRequest" id="specialRequest" rows="5" placeholder="Enter any special requests here..."><?= set_value('specialRequest') ?></textarea>
+							</div>
+						</div>
 					</div>
-				</div>
+					<!--  -->
+
+					<div class="row" data-aos="fade-up" data-aos-duration="1000">
+						<div class="col-lg-6 mt-5">
+							<h5 class="fw-bold">Your arrival time</h5>
+							<p class="small"><i class="ri-checkbox-circle-line ri-lg text-success"></i> Your room will be ready for check-in by <?= isset($hotelDetails->CheckInTime) ? htmlspecialchars($hotelDetails->CheckInTime) : '2:00 PM' ?></p>
+							<p class="small"><i class="ri-24-hours-line ri-lg text-success"></i> 24 hour desk help whenever you need</p>
+						</div>
+
+						<div class="col-lg-6 mt-5">
+							<h6><b>Add your estimated arrival time</b> (optional)</h6>
+							<div class="col-lg-5">
+								<select class="form-select" name="arrivalTime" aria-label="Estimated arrival time">
+									<option value="" selected>Please select</option>
+									<option value="00:00-01:00">12:00 AM - 1:00 AM</option>
+									<option value="01:00-02:00">1:00 AM - 2:00 AM</option>
+									<option value="02:00-03:00">2:00 AM - 3:00 AM</option>
+									<option value="03:00-04:00">3:00 AM - 4:00 AM</option>
+									<option value="04:00-05:00">4:00 AM - 5:00 AM</option>
+									<option value="05:00-06:00">5:00 AM - 6:00 AM</option>
+									<option value="06:00-07:00">6:00 AM - 7:00 AM</option>
+									<option value="07:00-08:00">7:00 AM - 8:00 AM</option>
+									<option value="08:00-09:00">8:00 AM - 9:00 AM</option>
+									<option value="09:00-10:00">9:00 AM - 10:00 AM</option>
+									<option value="10:00-11:00">10:00 AM - 11:00 AM</option>
+									<option value="11:00-12:00">11:00 AM - 12:00 PM</option>
+									<option value="12:00-13:00">12:00 PM - 1:00 PM</option>
+									<option value="13:00-14:00">1:00 PM - 2:00 PM</option>
+									<option value="14:00-15:00">2:00 PM - 3:00 PM</option>
+									<option value="15:00-16:00">3:00 PM - 4:00 PM</option>
+									<option value="16:00-17:00">4:00 PM - 5:00 PM</option>
+									<option value="17:00-18:00">5:00 PM - 6:00 PM</option>
+									<option value="18:00-19:00">6:00 PM - 7:00 PM</option>
+									<option value="19:00-20:00">7:00 PM - 8:00 PM</option>
+									<option value="20:00-21:00">8:00 PM - 9:00 PM</option>
+									<option value="21:00-22:00">9:00 PM - 10:00 PM</option>
+									<option value="22:00-23:00">10:00 PM - 11:00 PM</option>
+									<option value="23:00-00:00">11:00 PM - 12:00 AM</option>
+								</select>
+							</div>
+						</div>
+					</div>
+
+					<div class="col-lg-12 mt-4" data-aos="fade-up" data-aos-duration="1000">
+						<div class="form-check mb-3">
+							<input class="form-check-input" type="checkbox" name="agreeTerms" id="agreeTerms" required>
+							<label class="form-check-label small" for="agreeTerms">
+								I agree to the <a href="#" class="text-primary">Terms and Conditions</a> and <a href="#" class="text-primary">Privacy Policy</a>
+							</label>
+						</div>
+						<div class="d-grid d-md-flex justify-content-md-end">
+							<button type="submit" class="btn btn-warning fw-bold btn-lg px-5">
+								<i class="ri-lock-line"></i> Complete Booking - <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($total, 2) ?>
+							</button>
+						</div>
+					</div>
+				</form>
 
 			</div>
 		</div>

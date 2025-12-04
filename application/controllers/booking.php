@@ -163,19 +163,164 @@ class Booking extends CI_Controller
 			return;
 		}
 
-		// Get guest details
-		$guestData = array(
-			'firstName' => $this->input->post('firstName', TRUE),
-			'lastName' => $this->input->post('lastName', TRUE),
-			'email' => $this->input->post('email', TRUE),
-			'phone' => $this->input->post('phone', TRUE),
+		// Get booking data from session
+		$bookingData = $this->booking_model->load_from_session();
+
+		// Validate required booking data
+		if (empty($bookingData['searchSessionId'])) {
+			$this->session->set_flashdata('error', 'Session expired. Please start a new search.');
+			redirect('home');
+			return;
+		}
+
+		// Extract booking data
+		$searchSessionId = $bookingData['searchSessionId'];
+		$arrivalDate = $bookingData['arrivalDate'];
+		$departureDate = $bookingData['departureDate'];
+		$countryCode = $bookingData['countryCode'];
+		$cityCode = $bookingData['cityCode'];
+		$hotelId = $bookingData['hotelId'];
+		$hotelName = $bookingData['hotelName'];
+		$totalRate = $bookingData['totalRate'];
+		$currency = $bookingData['currency'];
+		$roomType = $bookingData['roomType'];
+		$boardBasis = $bookingData['boardBasis'];
+		$bookingKey = $bookingData['bookingKey'];
+		$adults = (int) $bookingData['adults'];
+		$children = (int) $bookingData['children'];
+		$totalRooms = (int) $bookingData['totalRooms'];
+
+		// Format dates for API (d/m/Y)
+		$arrivalDateFormatted = Carbon::createFromFormat('Y-m-d', $arrivalDate)->format('d/m/Y');
+		$departureDateFormatted = Carbon::createFromFormat('Y-m-d', $departureDate)->format('d/m/Y');
+
+		// Calculate room rates (pipe-separated for multiple rooms)
+		$rates = $this->booking_model->calculate_room_rates($totalRate, $totalRooms);
+
+		// Build board basis for multiple rooms (pipe-separated)
+		$boardBasisMultiple = implode('|', array_fill(0, $totalRooms, $boardBasis));
+
+		// Build children ages string (format: age1*age2 for children)
+		$childrenAges = '';
+		if ($children > 0) {
+			// Get children ages from POST or default to 5
+			$ages = array();
+			for ($i = 1; $i <= $children; $i++) {
+				$age = $this->input->post('child_age_' . $i, TRUE);
+				$ages[] = $age ? $age : '5';
+			}
+			$childrenAges = implode('*', $ages);
+		}
+
+		// Build guests array for each room
+		$guests = array();
+		$guestIndex = 1;
+		$totalGuestsPerRoom = ceil(($adults + $children) / $totalRooms);
+
+		for ($room = 1; $room <= $totalRooms; $room++) {
+			$roomGuests = array();
+
+			// Add guests for this room
+			for ($g = 0; $g < $totalGuestsPerRoom && $guestIndex <= ($adults + $children); $g++) {
+				$salutation = $this->input->post('salutation_' . $guestIndex, TRUE) ?: 'Mr';
+				$firstName = $this->input->post('firstName_' . $guestIndex, TRUE);
+				$lastName = $this->input->post('lastName_' . $guestIndex, TRUE);
+
+				if ($firstName && $lastName) {
+					$roomGuests[] = array(
+						'salutation' => $salutation,
+						'firstName' => strtoupper($firstName),
+						'lastName' => strtoupper($lastName),
+					);
+				}
+				$guestIndex++;
+			}
+
+			if (!empty($roomGuests)) {
+				$guests[] = $roomGuests;
+			}
+		}
+
+		// If no guests collected from numbered fields, try single guest fields
+		if (empty($guests)) {
+			$firstName = $this->input->post('firstName', TRUE);
+			$lastName = $this->input->post('lastName', TRUE);
+			$salutation = $this->input->post('salutation', TRUE) ?: 'Mr';
+
+			if ($firstName && $lastName) {
+				$guests[] = array(
+					array(
+						'salutation' => $salutation,
+						'firstName' => strtoupper($firstName),
+						'lastName' => strtoupper($lastName),
+					)
+				);
+			}
+		}
+
+		// Store contact info in session for success page
+		$guestFirstName = $this->input->post('firstName', TRUE);
+		$guestLastName = $this->input->post('lastName', TRUE);
+		$this->session->set_userdata('booking_email', $this->input->post('email', TRUE));
+		$this->session->set_userdata('booking_phone', $this->input->post('phone', TRUE));
+		$this->session->set_userdata('booking_guest_name', $guestFirstName . ' ' . $guestLastName);
+
+		// Call bookHotel API
+		$bookingResponse = $this->rezlive_api->bookHotel(array(
+			'searchSessionId' => $searchSessionId,
+			'arrivalDate' => $arrivalDateFormatted,
+			'departureDate' => $departureDateFormatted,
+			'countryCode' => $countryCode,
+			'cityCode' => $cityCode,
+			'hotelId' => $hotelId,
+			'hotelName' => $hotelName,
+			'currency' => $currency,
+			'roomType' => $roomType,
+			'boardBasis' => $boardBasisMultiple,
+			'bookingKey' => $bookingKey,
+			'adults' => $adults,
+			'children' => $children,
+			'childrenAges' => $childrenAges,
+			'totalRooms' => $totalRooms,
+			'rates' => $rates,
+			'guests' => $guests,
+		));
+
+		// Log response for debugging
+		log_message('debug', 'Booking Response: ' . print_r($bookingResponse, TRUE));
+
+		// Check response
+		if ($bookingResponse === null) {
+			$this->session->set_flashdata('error', 'Booking failed. Please try again.');
+			redirect('booking');
+			return;
+		}
+
+		// Check for API error
+		if (isset($bookingResponse->error)) {
+			$errorMessage = (string) $bookingResponse->error;
+			$this->session->set_flashdata('error', 'Booking failed: ' . $errorMessage);
+			redirect('booking');
+			return;
+		}
+
+		// Store booking confirmation details in session
+		$confirmationData = array(
+			'bookingId' => isset($bookingResponse->BookingId) ? (string) $bookingResponse->BookingId : '',
+			'bookingRefNo' => isset($bookingResponse->BookingRefNo) ? (string) $bookingResponse->BookingRefNo : '',
+			'status' => isset($bookingResponse->Status) ? (string) $bookingResponse->Status : 'Confirmed',
+			'hotelName' => $hotelName,
+			'arrivalDate' => $arrivalDateFormatted,
+			'departureDate' => $departureDateFormatted,
+			'totalRate' => $totalRate,
+			'currency' => $currency,
 		);
+		$this->session->set_userdata('booking_confirmation', $confirmationData);
 
-		// TODO: Implement actual booking API call
-		// $bookingResponse = $this->rezlive_api->confirmBooking($guestData);
+		// Clear booking session data
+		$this->booking_model->clear_session();
 
-		// For now, just show a success message
-		$this->session->set_flashdata('success', 'Booking request submitted successfully!');
+		$this->session->set_flashdata('success', 'Booking confirmed successfully!');
 		redirect('booking/success');
 	}
 
@@ -184,7 +329,15 @@ class Booking extends CI_Controller
 	 */
 	public function success()
 	{
-		$data['title'] = 'Booking Confirmed | MakeIFly';
+		// Check if we have confirmation data
+		$confirmation = $this->session->userdata('booking_confirmation');
+		if (empty($confirmation)) {
+			redirect('home');
+			return;
+		}
+
+		$data['title'] = 'Booking Confirmed | ' . $confirmation['hotelName'];
+		$data['confirmation'] = $confirmation;
 		$data['content'] = $this->load->view('pages/booking_success', $data, TRUE);
 		$this->load->view('layouts/master', $data);
 	}

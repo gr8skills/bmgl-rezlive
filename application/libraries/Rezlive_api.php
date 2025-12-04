@@ -296,6 +296,86 @@ class Rezlive_api
 	}
 
 	/**
+	 * Book a hotel room (final booking)
+	 * @param array $params Booking parameters
+	 * @return SimpleXMLElement|null
+	 */
+	public function bookHotel($params)
+	{
+		$required = array('searchSessionId', 'arrivalDate', 'departureDate', 'countryCode',
+			'cityCode', 'hotelId', 'hotelName', 'currency', 'roomType',
+			'boardBasis', 'bookingKey', 'adults', 'children', 'totalRooms', 'rates', 'guests');
+
+		foreach ($required as $field) {
+			if (!isset($params[$field])) {
+				log_message('error', "BookHotel missing required field: {$field}");
+				return null;
+			}
+		}
+
+		// Generate unique agent reference number
+		$agentRefNo = uniqid('bmgl-') . '-' . time();
+
+		// Build children ages XML
+		$childrenAges = '';
+		if (!empty($params['childrenAges'])) {
+			$childrenAges = $params['childrenAges'];
+		}
+
+		// Build guests XML for each room
+		$guestsXml = '';
+		if (is_array($params['guests'])) {
+			foreach ($params['guests'] as $roomGuests) {
+				$guestsXml .= "<Guests>\n";
+				if (is_array($roomGuests)) {
+					foreach ($roomGuests as $guest) {
+						$salutation = isset($guest['salutation']) ? htmlspecialchars($guest['salutation']) : 'Mr';
+						$firstName = isset($guest['firstName']) ? htmlspecialchars($guest['firstName']) : '';
+						$lastName = isset($guest['lastName']) ? htmlspecialchars($guest['lastName']) : '';
+						$guestsXml .= "                    <Guest>
+                        <Salutation>{$salutation}</Salutation>
+                        <FirstName>{$firstName}</FirstName>
+                        <LastName>{$lastName}</LastName>
+                    </Guest>\n";
+					}
+				}
+				$guestsXml .= "                </Guests>\n";
+			}
+		}
+
+		$xmlString = "<BookingRequest>
+    {$this->getAuthXml()}
+    <Booking>
+        <SearchSessionId>{$params['searchSessionId']}</SearchSessionId>
+        <AgentRefNo>{$agentRefNo}</AgentRefNo>
+        <ArrivalDate>{$params['arrivalDate']}</ArrivalDate>
+        <DepartureDate>{$params['departureDate']}</DepartureDate>
+        <GuestNationality>{$params['countryCode']}</GuestNationality>
+        <CountryCode>{$params['countryCode']}</CountryCode>
+        <City>{$params['cityCode']}</City>
+        <HotelId>{$params['hotelId']}</HotelId>
+        <Name>{$params['hotelName']}</Name>
+        <Currency>{$params['currency']}</Currency>
+        <RoomDetails>
+            <RoomDetail>
+                <Type>{$params['roomType']}</Type>
+                <BookingKey>{$params['bookingKey']}</BookingKey>
+                <Adults>{$params['adults']}</Adults>
+                <Children>{$params['children']}</Children>
+                <ChildrenAges>{$childrenAges}</ChildrenAges>
+                <TotalRooms>{$params['totalRooms']}</TotalRooms>
+                <TotalRate>{$params['rates']}</TotalRate>
+                <BoardBasis>{$params['boardBasis']}</BoardBasis>
+                {$guestsXml}
+            </RoomDetail>
+        </RoomDetails>
+    </Booking>
+</BookingRequest>";
+
+		return $this->request('bookhotel', $xmlString);
+	}
+
+	/**
 	 * Save XML to file for debugging
 	 * @param string $type 'request' or 'response'
 	 * @param string $xml XML content
