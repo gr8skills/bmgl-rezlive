@@ -197,7 +197,8 @@ class Rezlive_api
 			$hotelIdsXml = "<HotelIDs>" . $idsXml . "</HotelIDs>";
 		}
 
-		$xmlString = "<HotelFindRequest>
+		$xmlString = "<?xml version=\"1.0\" ?>
+<HotelFindRequest>
     {$this->getAuthXml()}
     <Booking>
         <ArrivalDate>{$params['arrivalDate']}</ArrivalDate>
@@ -235,7 +236,8 @@ class Rezlive_api
 	 */
 	public function getHotelDetails($hotelId)
 	{
-		$xmlString = "<HotelDetailsRequest>
+		$xmlString = "<?xml version=\"1.0\" ?>
+<HotelDetailsRequest>
     {$this->getAuthXml()}
     <Hotels>
         <HotelId>{$hotelId}</HotelId>
@@ -263,9 +265,10 @@ class Rezlive_api
 			}
 		}
 
-		$childrenAges = isset($params['childrenAges']) ? $params['childrenAges'] : '<ChildrenAges></ChildrenAges>';
+		$childrenAges = isset($params['childrenAges']) && !empty($params['childrenAges']) ? $params['childrenAges'] : '0';
 
-		$xmlString = "<PreBookingRequest>
+		$xmlString = "<?xml version=\"1.0\" ?>
+<PreBookingRequest>
     {$this->getAuthXml()}
     <PreBooking>
         <SearchSessionId>{$params['searchSessionId']}</SearchSessionId>
@@ -284,7 +287,7 @@ class Rezlive_api
                 <BookingKey>{$params['bookingKey']}</BookingKey>
                 <Adults>{$params['adults']}</Adults>
                 <Children>{$params['children']}</Children>
-                {$childrenAges}
+                <ChildrenAges>{$childrenAges}</ChildrenAges>
                 <TotalRooms>{$params['totalRooms']}</TotalRooms>
                 <TotalRate>{$params['rates']}</TotalRate>
             </RoomDetail>
@@ -316,8 +319,8 @@ class Rezlive_api
 		// Generate unique agent reference number
 		$agentRefNo = uniqid('bmgl-') . '-' . time();
 
-		// Build children ages XML
-		$childrenAges = '';
+		// Build children ages XML - default to 0 if empty
+		$childrenAges = '0';
 		if (!empty($params['childrenAges'])) {
 			$childrenAges = $params['childrenAges'];
 		}
@@ -343,7 +346,8 @@ class Rezlive_api
 			}
 		}
 
-		$xmlString = "<BookingRequest>
+		$xmlString = "<?xml version=\"1.0\" ?>
+<BookingRequest>
     {$this->getAuthXml()}
     <Booking>
         <SearchSessionId>{$params['searchSessionId']}</SearchSessionId>

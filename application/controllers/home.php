@@ -13,6 +13,96 @@ class Home extends CI_Controller {
 	}
 
 	/**
+	 * Detect user's location from IP address
+	 * @return array Location data with city, country, cityCode, countryCode
+	 */
+	private function detectLocationFromIP()
+	{
+		// Check if we have cached location in session
+		$cachedLocation = $this->session->userdata('detected_location');
+		if ($cachedLocation) {
+			return $cachedLocation;
+		}
+
+		// Default location
+		$location = array(
+			'city' => 'Lagos',
+			'country' => 'Nigeria',
+			'cityCode' => DEFAULT_CITY_CODE,
+			'countryCode' => DEFAULT_COUNTRY_CODE,
+			'locationString' => 'Lagos (Nigeria)'
+		);
+
+		try {
+			// Get user's IP address
+			$ip = $this->input->ip_address();
+
+			// Skip for localhost/private IPs - use default
+			if ($ip === '127.0.0.1' || $ip === '::1' || strpos($ip, '192.168.') === 0 || strpos($ip, '10.') === 0) {
+				// For local development, try to get external IP or use default
+				$ip = '';
+			}
+
+			// Use ip-api.com for geolocation (free, no API key required)
+			$apiUrl = 'http://ip-api.com/json/' . $ip . '?fields=status,city,country,countryCode';
+
+			$ch = curl_init();
+			curl_setopt_array($ch, array(
+				CURLOPT_URL => $apiUrl,
+				CURLOPT_RETURNTRANSFER => true,
+				CURLOPT_TIMEOUT => 5,
+				CURLOPT_CONNECTTIMEOUT => 3,
+			));
+
+			$response = curl_exec($ch);
+			$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			curl_close($ch);
+
+			if ($response !== false && $httpCode === 200) {
+				$geoData = json_decode($response, true);
+
+				if (isset($geoData['status']) && $geoData['status'] === 'success' && !empty($geoData['city'])) {
+					$detectedCity = $geoData['city'];
+					$detectedCountry = $geoData['country'];
+
+					// Try to find this city in our database
+					$cityData = $this->city_model->get_by_name_and_country($detectedCity, $detectedCountry);
+
+					if ($cityData) {
+						$location = array(
+							'city' => $cityData->name,
+							'country' => $cityData->country_name,
+							'cityCode' => $cityData->city_code,
+							'countryCode' => $cityData->country_code,
+							'locationString' => $cityData->name . ' (' . $cityData->country_name . ')'
+						);
+					} else {
+						// City not in database, try searching by city name only
+						$searchResults = $this->city_model->search($detectedCity, 1);
+						if (!empty($searchResults)) {
+							$cityData = $searchResults[0];
+							$location = array(
+								'city' => $cityData->name,
+								'country' => $cityData->country_name,
+								'cityCode' => $cityData->city_code,
+								'countryCode' => $cityData->country_code,
+								'locationString' => $cityData->name . ' (' . $cityData->country_name . ')'
+							);
+						}
+					}
+				}
+			}
+		} catch (Exception $e) {
+			log_message('error', 'IP Geolocation error: ' . $e->getMessage());
+		}
+
+		// Cache in session for 1 hour
+		$this->session->set_userdata('detected_location', $location);
+
+		return $location;
+	}
+
+	/**
 	 * Homepage - Display default hotel search results
 	 */
 	public function index()
@@ -24,13 +114,16 @@ class Home extends CI_Controller {
 		$afterFiveDays = date('d/m/Y', strtotime('+5 day'));
 		$guests = '1,0,1';
 
-		// Use Rezlive API library
+		// Detect user's location from IP
+		$detectedLocation = $this->detectLocationFromIP();
+
+		// Use Rezlive API library with detected location
 		$apiResponse = $this->rezlive_api->findHotels(array(
 			'arrivalDate' => $now,
 			'departureDate' => $afterFiveDays,
-			'countryCode' => DEFAULT_COUNTRY_CODE,
-			'cityCode' => DEFAULT_CITY_CODE,
-			'nationality' => DEFAULT_COUNTRY_CODE,
+			'countryCode' => $detectedLocation['countryCode'],
+			'cityCode' => $detectedLocation['cityCode'],
+			'nationality' => $detectedLocation['countryCode'],
 			'adults' => 1,
 			'children' => 0,
 			'rooms' => 1,
@@ -54,10 +147,15 @@ class Home extends CI_Controller {
 		$defaults->Booking = new stdClass();
 		$defaults->Booking->ArrivalDate = $now;
 		$defaults->Booking->DepartureDate = $afterFiveDays;
-		$defaults->location = 'Lagos (Nigeria)';
+		$defaults->Booking->CountryCode = $detectedLocation['countryCode'];
+		$defaults->Booking->City = $detectedLocation['cityCode'];
+		$defaults->location = $detectedLocation['locationString'];
 		$defaults->currency = '&#8358;';
 		$defaults->guests = $guests;
 		$data['defaults'] = $defaults;
+
+		// Pass detected location info to view
+		$data['detectedLocation'] = $detectedLocation;
 
 		$data['content'] = $this->load->view('pages/home', $data, TRUE);
 		$this->load->view('layouts/master', $data);
