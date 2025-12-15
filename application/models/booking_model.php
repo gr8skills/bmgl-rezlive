@@ -19,11 +19,18 @@ class Booking_model extends CI_Model
 	 */
 	public function save_to_session($data)
 	{
+		// Clear existing booking data first
+		$this->clear_session();
+
+		// Build array of values to save (only keys that exist in data)
+		$sessionData = array();
 		foreach ($this->sessionKeys as $key) {
 			if (isset($data[$key])) {
-				$this->session->set_userdata($key, $data[$key]);
+				$sessionData[$key] = $data[$key];
 			}
 		}
+		// Save all at once to avoid partial saves
+		$this->session->set_userdata($sessionData);
 	}
 
 	/**
@@ -70,15 +77,15 @@ class Booking_model extends CI_Model
 	}
 
 	/**
-	 * Generate children ages XML based on number of children
+	 * Generate children ages value based on number of children
 	 * @param int $children Number of children
-	 * @return string XML string for children ages
+	 * @return string Ages value in format "2*3*4" or "0" if no children
 	 */
 	public function generate_children_ages_xml($children)
 	{
 		$children = (int)$children;
 		if ($children <= 0) {
-			return "<ChildrenAges></ChildrenAges>";
+			return "0";
 		}
 
 		// Generate random ages between 1-9 in format "2*3*4"
@@ -87,7 +94,7 @@ class Booking_model extends CI_Model
 			$ages[] = rand(1, 9);
 		}
 
-		return "<ChildrenAges>" . implode('*', $ages) . "</ChildrenAges>";
+		return implode('*', $ages);
 	}
 
 	/**

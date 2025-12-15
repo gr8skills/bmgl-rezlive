@@ -256,7 +256,7 @@ class Rezlive_api
 	{
 		$required = array('searchSessionId', 'arrivalDate', 'departureDate', 'countryCode',
 			'cityCode', 'hotelId', 'totalRate', 'currency', 'roomType',
-			'boardBasis', 'bookingKey', 'adults', 'children', 'totalRooms', 'rates');
+			'boardBasis', 'bookingKey', 'adults', 'children', 'totalRooms');
 
 		foreach ($required as $field) {
 			if (!isset($params[$field])) {
@@ -289,7 +289,7 @@ class Rezlive_api
                 <Children>{$params['children']}</Children>
                 <ChildrenAges>{$childrenAges}</ChildrenAges>
                 <TotalRooms>{$params['totalRooms']}</TotalRooms>
-                <TotalRate>{$params['rates']}</TotalRate>
+                <TotalRate>{$params['totalRate']}</TotalRate>
             </RoomDetail>
         </RoomDetails>
     </PreBooking>
@@ -307,7 +307,7 @@ class Rezlive_api
 	{
 		$required = array('searchSessionId', 'arrivalDate', 'departureDate', 'countryCode',
 			'cityCode', 'hotelId', 'hotelName', 'currency', 'roomType',
-			'boardBasis', 'bookingKey', 'adults', 'children', 'totalRooms', 'rates', 'guests');
+			'boardBasis', 'bookingKey', 'adults', 'children', 'totalRooms', 'totalRate', 'guests');
 
 		foreach ($required as $field) {
 			if (!isset($params[$field])) {
@@ -368,7 +368,7 @@ class Rezlive_api
                 <Children>{$params['children']}</Children>
                 <ChildrenAges>{$childrenAges}</ChildrenAges>
                 <TotalRooms>{$params['totalRooms']}</TotalRooms>
-                <TotalRate>{$params['rates']}</TotalRate>
+                <TotalRate>{$params['totalRate']}</TotalRate>
                 <BoardBasis>{$params['boardBasis']}</BoardBasis>
                 {$guestsXml}
             </RoomDetail>

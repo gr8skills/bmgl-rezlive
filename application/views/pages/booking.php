@@ -1,3 +1,11 @@
+<?php
+// Display PHP errors for debugging (remove in production)
+if (ENVIRONMENT !== 'production') {
+	error_reporting(E_ALL);
+	ini_set('display_errors', 1);
+}
+?>
+
 <!-- Web timeline -->
 <section class="local-flight-timeline d-none d-lg-block" data-aos="fade-up" data-aos-duration="1000">
 	<div class="container">
@@ -66,8 +74,9 @@
 						<h5 class="fw-bold">Your booking details</h5>
 						<div class="row mt-4">
 							<?php
-							$arrivalDateStr = $apiResponse ? (string)$apiResponse->arrivalDate : $default->arrivalDate;
-							$departureDateStr = $apiResponse ? (string)$apiResponse->departureDate : $default->departureDate;
+							// Use default values from session (these contain the correct booking data)
+							$arrivalDateStr = $default->arrivalDate;
+							$departureDateStr = $default->departureDate;
 
 							$arrivalDate = DateTime::createFromFormat('d/m/Y', $arrivalDateStr);
 							$departureDate = DateTime::createFromFormat('d/m/Y', $departureDateStr);
@@ -89,12 +98,10 @@
 
 							// Use exchange rate from controller if available
 							$rate = isset($exchangeRate) ? $exchangeRate : 1;
-							$currency = '&#8358;';
-							if ($apiResponse && (string)$apiResponse->currency !== 'NGN') {
-								$currency = $apiResponse ? (string)$apiResponse->currency : $default->currency;
-							}
+							$currency = $default->currency;
 
-							$totalRate = $apiResponse ? (float)$apiResponse->totalRate : (float)$default->totalRate;
+							// Use totalRate from session
+							$totalRate = (float)$default->totalRate;
 							$tax = $totalRate * 0.05 * $rate;
 							$cityTax = $totalRate * 0.02 * $rate;
 							$total = $totalRate * $rate + $tax + $cityTax;
@@ -117,7 +124,7 @@
 
 							<div class="col-lg-12 mt-3">
 								<p class="small fw-bold">You selected:</p>
-								<h5 class="fw-bold"><?= $apiResponse?$apiResponse->roomType : $default->roomType ?></h5>
+								<h5 class="fw-bold"><?= $default->roomType ?></h5>
 								<a href="<?= site_url('hotel/index') ?>" class="text-decoration-none fw-bold small">Change your selection</a>
 							</div>
 						</div>
@@ -132,7 +139,7 @@
 						<div class="row mt-4">
 							<div class="col-6">
 								<p class="fw-bold mb-n1">Price:</p>
-								<p class="small">Hotel's Currency: <?= $apiResponse ? (string)$apiResponse->currency : $default->currency ?> <?= number_format($totalRate, 2) ?></p>
+								<p class="small">Hotel's Currency: <?= $default->currency ?> <?= number_format($totalRate, 2) ?></p>
 							</div>
 							<div class="col-6 text-lg-end">
 								<p class="text-success fw-bold"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($totalRate, 2) ?></p>
@@ -249,7 +256,7 @@
 									<div class="col-lg-12">
 										<div class="row">
 											<div class="col-lg-8 col-6">
-												<h5 class="fw-bold mb-n0"><?= $apiResponse ? htmlspecialchars($apiResponse->hotelName) : htmlspecialchars($default->hotelName) ?></h5>
+												<h5 class="fw-bold mb-n0"><?= htmlspecialchars($default->hotelName) ?></h5>
 												<?php if (isset($hotelDetails->StarRating) && $hotelDetails->StarRating > 0): ?>
 													<?php for ($i = 0; $i < (int)$hotelDetails->StarRating; $i++): ?>
 														<i class="ri-star-fill text-warning"></i>
@@ -314,7 +321,40 @@
 				<!--  -->
 				<?php if ($this->session->flashdata('error')): ?>
 					<div class="alert alert-danger mt-3" role="alert">
-						<?= $this->session->flashdata('error') ?>
+						<strong>Error:</strong> <?= $this->session->flashdata('error') ?>
+					</div>
+				<?php endif; ?>
+
+				<?php if ($this->session->flashdata('success')): ?>
+					<div class="alert alert-success mt-3" role="alert">
+						<strong>Success:</strong> <?= $this->session->flashdata('success') ?>
+					</div>
+				<?php endif; ?>
+
+				<?php
+				// Display API errors if any
+				if (isset($apiResponse) && isset($apiResponse->error)):
+				?>
+					<div class="alert alert-warning mt-3" role="alert">
+						<strong>API Response:</strong> <?= htmlspecialchars((string)$apiResponse->error) ?>
+					</div>
+				<?php endif; ?>
+
+				<?php
+				// Debug: Show if apiResponse is null or has issues
+				if (!isset($apiResponse) || $apiResponse === null):
+				?>
+					<div class="alert alert-info mt-3" role="alert">
+						<strong>Note:</strong> No API response received. Using default values.
+					</div>
+				<?php endif; ?>
+
+				<?php
+				// Display exception error from controller
+				if (isset($apiError)):
+				?>
+					<div class="alert alert-danger mt-3" role="alert">
+						<strong>Exception:</strong> <?= htmlspecialchars($apiError) ?>
 					</div>
 				<?php endif; ?>
 

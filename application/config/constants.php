@@ -95,3 +95,6 @@ define('DEFAULT_CITY_CODE', '31606'); // Lagos
 define('USD_TO_NGN_RATE', 1600); // USD to Nigerian Naira exchange rate
 define('DISPLAY_CURRENCY', 'NGN');
 define('DISPLAY_CURRENCY_SYMBOL', '₦');
+
+// Pixabay API for hotel images (free tier: 100 requests/min)
+define('PIXABAY_API_KEY', '53730758-371c591a99f12930334be51a7'); // Get free key at pixabay.com/api/docs/

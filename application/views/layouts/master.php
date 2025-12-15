@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+	<link rel="shortcut icon" href="<?= base_url('assets/images/logo.png') ?>" type="image/png">
 	<title><?= $title ?? 'Hotel | MakeIFly - Flight booking and Hotel Reservation' ?></title>
 	<link rel="stylesheet" href="<?= base_url('assets/css/main.min.css') ?> ">
 	<link rel="stylesheet" href="<?= base_url('assets/css/style.css') ?>">

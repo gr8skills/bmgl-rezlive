@@ -175,11 +175,15 @@ class Hotel extends CI_Controller {
 		$defaults->children = $children;
 		$defaults->searchSessionId = $SearchSessionId;
 		$defaults->countryCode = $countryCode;
+		$defaults->cityCode = $cityCode;
 		$defaults->hotelCurrency = $hotelCurrency;
 		$data['defaults'] = $defaults;
 
 		// Use hotel details already fetched (cached)
 		$data['hotelDetails'] = $hotelDetails ? $hotelDetails->Hotels : null;
+
+		// Fetch hotel images if API doesn't provide them
+		$data['hotelImages'] = $this->fetchHotelImages($hotelName);
 
 		$data['content'] = $this->load->view('pages/hotel', $data, TRUE);
 		$this->load->view('layouts/master', $data);
@@ -262,6 +266,56 @@ class Hotel extends CI_Controller {
 
 		$data['content'] = $this->load->view('pages/home', $data, TRUE);
 		$this->load->view('layouts/master', $data);
+	}
+
+	/**
+	 * Fetch hotel images from Pixabay API
+	 * @param string $hotelName Hotel name for search query
+	 * @param int $count Number of images to fetch
+	 * @return array Array of image URLs
+	 */
+	private function fetchHotelImages($hotelName, $count = 7)
+	{
+		// Check cache first
+		$cacheKey = 'hotel_images_' . md5($hotelName);
+		$cached = $this->session->userdata($cacheKey);
+		if ($cached) {
+			return $cached;
+		}
+
+		$images = [];
+
+		// Try Pixabay API
+		if (defined('PIXABAY_API_KEY') && PIXABAY_API_KEY !== '48aborv-your-key-here') {
+			$query = urlencode($hotelName . ' hotel');
+			$url = "https://pixabay.com/api/?key=" . PIXABAY_API_KEY . "&q={$query}&image_type=photo&category=travel&per_page={$count}&safesearch=true";
+
+			$response = @file_get_contents($url);
+			if ($response) {
+				$data = json_decode($response, true);
+				if (isset($data['hits']) && !empty($data['hits'])) {
+					foreach ($data['hits'] as $hit) {
+						$images[] = $hit['webformatURL'];
+					}
+				}
+			}
+		}
+
+		// Fallback: Use Lorem Picsum with hotel-themed seeds if Pixabay fails
+		if (empty($images)) {
+			$seeds = [1015, 1029, 164, 237, 238, 239, 240]; // Scenic/architecture seeds
+			foreach ($seeds as $i => $seed) {
+				if ($i >= $count) break;
+				$width = ($i == 2) ? 1200 : 800; // Larger image for main display
+				$height = ($i == 2) ? 800 : 600;
+				$images[] = "https://picsum.photos/seed/{$seed}/{$width}/{$height}";
+			}
+		}
+
+		// Cache for 1 hour
+		$this->session->set_userdata($cacheKey, $images);
+
+		return $images;
 	}
 
 	/**

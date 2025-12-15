@@ -226,11 +226,13 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 				<!-- web -->
 				<div class="d-none d-lg-block">
 					<?php
-					// Get hotel images from API or use defaults
-					$hotelImages = [];
-					if (isset($hotelDetails->Images) && !empty($hotelDetails->Images)) {
-						$hotelImages = is_array($hotelDetails->Images) ? $hotelDetails->Images : [$hotelDetails->Images];
+					// Use hotel images from controller (Pixabay/Picsum) or API
+					if (!isset($hotelImages) || empty($hotelImages)) {
+						if (isset($hotelDetails->Images) && !empty($hotelDetails->Images)) {
+							$hotelImages = is_array($hotelDetails->Images) ? $hotelDetails->Images : [$hotelDetails->Images];
+						}
 					}
+
 					$defaultImg = base_url('assets/images/hotel/hotel-5.png');
 					?>
 					<div class="row mt-3 g-2" data-aos="fade-up" data-aos-duration="1000">
@@ -339,7 +341,7 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 				<p>
 					<?php
 								$description = isset($hotelDetails->Description) ? trim((string)$hotelDetails->Description) : '';
-								$defaultDescription = "Hotel booking in $default->location offers an incredible range of options to suit every taste and budget, making it a fantastic experience. From luxurious five-star beachfront resorts on Victoria Island and sleek business hotels in Ikoyi to affordable, stylish apartments in Lekki, the city caters to all. The competitive market means excellent value, with modern amenities often standard. The rise of user-friendly online platforms and apps has made searching, comparing, and securing the perfect stay effortless, often with instant confirmation. Furthermore, strategic bookings provide easy access to Lagos's vibrant business hubs, energetic nightlife, rich cultural scenes, and stunning Atlantic coastline. Whether visiting for work or leisure, finding a convenient, comfortable, and well-priced base in Nigeria's dynamic megacity has never been easier or more rewarding.";
+								$defaultDescription = "Hotel booking in Lagos offers an incredible range of options to suit every taste and budget, making it a fantastic experience. From luxurious five-star beachfront resorts on Victoria Island and sleek business hotels in Ikoyi to affordable, stylish apartments in Lekki, the city caters to all. The competitive market means excellent value, with modern amenities often standard. The rise of user-friendly online platforms and apps has made searching, comparing, and securing the perfect stay effortless, often with instant confirmation. Furthermore, strategic bookings provide easy access to Lagos's vibrant business hubs, energetic nightlife, rich cultural scenes, and stunning Atlantic coastline. Whether visiting for work or leisure, finding a convenient, comfortable, and well-priced base in Nigeria's dynamic megacity has never been easier or more rewarding.";
 								$fullDescription = $description !== '' ? $description : $defaultDescription;
 								$charLimit = 700;
 								$isLong = strlen($fullDescription) > $charLimit;
@@ -480,9 +482,12 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 							<p><i class="ri-user-fill"></i> <i class="ri-user-fill"></i></p>
 						</div>
 						<div class="col-lg-2">
-							<h5 class="fw-bold text-success"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format(convertToNaira($detail->TotalRate, $apiCurrency), 2) ?></h5>
-							<?php $taxAmount = convertToNaira($detail->TotalRate, $apiCurrency) * 0.05; ?>
-							<p class="small">+ <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($taxAmount, 2) ?> taxes and charges</p>
+							<?php
+							$basePrice = convertToNaira($detail->TotalRate, $apiCurrency);
+							$baseTax = $basePrice * 0.05;
+							?>
+							<h5 class="fw-bold text-success" id="priceDisplay_desktop_<?= $roomIndex ?>" data-base-price="<?= $basePrice ?>"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($basePrice, 2) ?></h5>
+							<p class="small" id="taxDisplay_desktop_<?= $roomIndex ?>" data-base-tax="<?= $baseTax ?>">+ <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($baseTax, 2) ?> taxes and charges</p>
 						</div>
 						<div class="col-lg">
 							<div class="row g-0">
@@ -544,7 +549,7 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 										<input type="hidden" name="arrivalDate" value="<?= $defaults->arrival ?>">
 										<input type="hidden" name="departureDate" value="<?= $defaults->departure ?>">
 										<input type="hidden" name="countryCode" value="<?= $defaults->countryCode ?>">
-										<input type="hidden" name="cityCode" value="<?= $hotelDetails->CityCode ?>">
+										<input type="hidden" name="cityCode" value="<?= $defaults->cityCode ?>">
 										<input type="hidden" name="hotelId" value="<?= $hotelDetails->HotelId ?>">
 										<input type="hidden" name="hotelName" value="<?= $hotelDetails->HotelName ?? '' ?>">
 										<input type="hidden" name="price" value="<?= $detail->TotalRate ?>">
@@ -555,7 +560,7 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 										<input type="hidden" name="adults" value="<?= $detail->Adults ?? 1 ?>">
 										<input type="hidden" name="children" value="<?= $detail->Children ?? 0 ?>">
 										<input type="hidden" name="totalRooms" id="totalRooms_desktop_<?= $roomIndex ?>" value="1">
-										<input type="hidden" name="totalRate" value="<?= $detail->TotalRate ?>">
+										<input type="hidden" name="totalRate" id="totalRate_desktop_<?= $roomIndex ?>" value="<?= $detail->TotalRate ?>" data-base-rate="<?= $detail->TotalRate ?>">
 										<button type="submit" class="btn btn-primary rounded-0 ms-3">Reserve</button>
 									</form>
 									<ul class="mt-3">
@@ -672,13 +677,13 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 						<div class="col-md-12 mt-5">
 							<form action="<?php echo site_url('booking/index')  ?>" method="post">
 								<input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
-								<input type="hidden" name="searchSessionId" value="<?= $apiResponse->SearchSessionId ?>">
+								<input type="hidden" name="searchSessionId" value="<?= $defaults->searchSessionId ?>">
 								<input type="hidden" name="arrivalDate" value="<?= $defaults->arrival ?>">
 								<input type="hidden" name="departureDate" value="<?= $defaults->departure ?>">
-								<input type="hidden" name="countryCode" value="<?= $apiResponse->CountryCode ?>">
-								<input type="hidden" name="cityCode" value="<?= $hotelDetails->Hotels->CityCode ?>">
-								<input type="hidden" name="hotelId" value="<?= $hotelDetails->Hotels->HotelId ?>">
-								<input type="hidden" name="hotelName" value="<?= $hotelDetails->Hotels->HotelName ?? '' ?>">
+								<input type="hidden" name="countryCode" value="<?= $defaults->countryCode ?>">
+								<input type="hidden" name="cityCode" value="<?= $defaults->cityCode ?>">
+								<input type="hidden" name="hotelId" value="<?= $hotelDetails->HotelId ?>">
+								<input type="hidden" name="hotelName" value="<?= $hotelDetails->HotelName ?? '' ?>">
 								<input type="hidden" name="price" value="<?= $detail->TotalRate ?>">
 								<input type="hidden" name="currency" value="<?= $apiCurrency ?>">
 								<input type="hidden" name="roomType" value="<?= $detail->Type ?>">
@@ -687,7 +692,7 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 								<input type="hidden" name="adults" value="<?= $detail->Adults ?? 1 ?>">
 								<input type="hidden" name="children" value="<?= $detail->Children ?? 0 ?>">
 								<input type="hidden" name="totalRooms" id="totalRooms_mobile_<?= $mobileRoomIndex ?>" value="1">
-								<input type="hidden" name="totalRate" value="<?= $detail->TotalRate ?>">
+								<input type="hidden" name="totalRate" id="totalRate_mobile_<?= $mobileRoomIndex ?>" value="<?= $detail->TotalRate ?>" data-base-rate="<?= $detail->TotalRate ?>">
 								<button type="submit" class="btn btn-primary px-5 rounded-0 fw-bold">Reserve</button>
 							</form>
 
@@ -698,9 +703,12 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 							</ul>
 						</div>
 						<div class="col-md-12 mt-3">
-							<h4 class="text-success"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format(convertToNaira($detail->TotalRate, $apiCurrency), 2) ?></h4>
-							<?php $taxAmountMobile = convertToNaira($detail->TotalRate, $apiCurrency) * 0.05; ?>
-							<p class="small">+ <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($taxAmountMobile, 2) ?> taxes and charges</p>
+							<?php
+							$basePriceMobile = convertToNaira($detail->TotalRate, $apiCurrency);
+							$baseTaxMobile = $basePriceMobile * 0.05;
+							?>
+							<h4 class="text-success" id="priceDisplay_mobile_<?= $mobileRoomIndex ?>" data-base-price="<?= $basePriceMobile ?>"><?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($basePriceMobile, 2) ?></h4>
+							<p class="small" id="taxDisplay_mobile_<?= $mobileRoomIndex ?>" data-base-tax="<?= $baseTaxMobile ?>">+ <?= DISPLAY_CURRENCY_SYMBOL ?> <?= number_format($baseTaxMobile, 2) ?> taxes and charges</p>
 						</div>
 					</div>
 				</div>
@@ -1486,13 +1494,25 @@ $apiCurrency = isset($apiResponse->Currency) ? (string)$apiResponse->Currency : 
 
 <script>
 /**
- * Update room quantity for a specific room
+ * Format number with commas and 2 decimal places
+ * @param {number} num - Number to format
+ * @returns {string} Formatted number string
+ */
+function formatCurrency(num) {
+    return num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+}
+
+/**
+ * Update room quantity for a specific room and recalculate prices
  * @param {string} id - Unique identifier for the room (e.g., 'desktop_0', 'mobile_1')
  * @param {number} change - Amount to change (+1 or -1)
  */
 function updateRoomQty(id, change) {
     var displayEl = document.getElementById('roomQtyDisplay_' + id);
     var inputEl = document.getElementById('totalRooms_' + id);
+    var priceEl = document.getElementById('priceDisplay_' + id);
+    var taxEl = document.getElementById('taxDisplay_' + id);
+    var totalRateEl = document.getElementById('totalRate_' + id);
 
     if (!displayEl || !inputEl) return;
 
@@ -1507,5 +1527,24 @@ function updateRoomQty(id, change) {
     // Update display and hidden input
     displayEl.textContent = newValue;
     inputEl.value = newValue;
+
+    // Update prices if elements exist
+    if (priceEl && taxEl) {
+        var basePrice = parseFloat(priceEl.getAttribute('data-base-price')) || 0;
+        var baseTax = parseFloat(taxEl.getAttribute('data-base-tax')) || 0;
+
+        var newPrice = basePrice * newValue;
+        var newTax = baseTax * newValue;
+
+        // Update displayed prices (keep the currency symbol)
+        priceEl.innerHTML = '<?= DISPLAY_CURRENCY_SYMBOL ?> ' + formatCurrency(newPrice);
+        taxEl.innerHTML = '+ <?= DISPLAY_CURRENCY_SYMBOL ?> ' + formatCurrency(newTax) + ' taxes and charges';
+    }
+
+    // Update hidden totalRate form input
+    if (totalRateEl) {
+        var baseRate = parseFloat(totalRateEl.getAttribute('data-base-rate')) || 0;
+        totalRateEl.value = (baseRate * newValue).toFixed(7);
+    }
 }
 </script>

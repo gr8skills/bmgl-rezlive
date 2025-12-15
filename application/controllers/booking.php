@@ -19,7 +19,7 @@ class Booking extends CI_Controller
 	{
 		// PRG Pattern: If POST request, save to session and redirect to GET
 		if ($this->input->post('searchSessionId')) {
-			$this->booking_model->save_to_session(array(
+			$postData = array(
 				'searchSessionId' => $this->input->post('searchSessionId'),
 				'arrivalDate' => $this->input->post('arrivalDate'),
 				'departureDate' => $this->input->post('departureDate'),
@@ -35,7 +35,11 @@ class Booking extends CI_Controller
 				'adults' => $this->input->post('adults'),
 				'children' => $this->input->post('children'),
 				'totalRooms' => $this->input->post('totalRooms'),
-			));
+			);
+			// Debug: Log POST data
+			log_message('debug', 'Booking POST data: ' . print_r($postData, TRUE));
+
+			$this->booking_model->save_to_session($postData);
 			// Redirect to same page as GET request
 			redirect('booking/index');
 			return;
@@ -45,6 +49,9 @@ class Booking extends CI_Controller
 
 		// Get booking data from session (after redirect)
 		$bookingData = $this->booking_model->load_from_session();
+
+		// Debug: Log session data
+		log_message('debug', 'Booking session data: ' . print_r($bookingData, TRUE));
 
 		// Validate required data - redirect to home if no session data
 		if (empty($bookingData['searchSessionId'])) {
@@ -72,45 +79,63 @@ class Booking extends CI_Controller
 		// Generate children ages XML
 		$childrenAges = $this->booking_model->generate_children_ages_xml($children);
 
-		// Format dates for API
-		$arrivalDateFormatted = Carbon::createFromFormat('Y-m-d', $arrivalDate)->format('d/m/Y');
-		$departureDateFormatted = Carbon::createFromFormat('Y-m-d', $departureDate)->format('d/m/Y');
+		// Format dates for API - handle both Y-m-d and d/m/Y formats
+		try {
+			$arrivalCarbon = Carbon::createFromFormat('Y-m-d', $arrivalDate);
+		} catch (Exception $e) {
+			try {
+				$arrivalCarbon = Carbon::createFromFormat('d/m/Y', $arrivalDate);
+			} catch (Exception $e) {
+				$arrivalCarbon = Carbon::now();
+			}
+		}
+		$arrivalDateFormatted = $arrivalCarbon->format('d/m/Y');
+
+		try {
+			$departureCarbon = Carbon::createFromFormat('Y-m-d', $departureDate);
+		} catch (Exception $e) {
+			try {
+				$departureCarbon = Carbon::createFromFormat('d/m/Y', $departureDate);
+			} catch (Exception $e) {
+				$departureCarbon = Carbon::now()->addDay();
+			}
+		}
+		$departureDateFormatted = $departureCarbon->format('d/m/Y');
 
 		// Calculate room rates
 		$rates = $this->booking_model->calculate_room_rates($totalRate, $totalRooms);
 
 		$data['title'] = 'Booking: ' . $hotelName;
 
-		// Get city info for display
-		$city = $this->city_model->get_by_code($hotelId);
+		// Get city name for display (use cityCode from session, don't overwrite it)
+		$city = $this->city_model->get_by_code($cityCode);
 		$cityName = $city ? $city->name : 'Lagos';
-		if ($city) {
-			$cityCode = $city->city_code;
-			$countryCode = $city->country_code;
-		} else {
-			$cityCode = DEFAULT_CITY_CODE;
-			$countryCode = DEFAULT_COUNTRY_CODE;
-		}
 
 		// Call PreBook API
-		$apiResponse = $this->rezlive_api->preBook(array(
-			'searchSessionId' => $searchSessionId,
-			'arrivalDate' => $arrivalDateFormatted,
-			'departureDate' => $departureDateFormatted,
-			'countryCode' => $countryCode,
-			'cityCode' => $cityCode,
-			'hotelId' => $hotelId,
-			'totalRate' => $totalRate,
-			'currency' => $currency,
-			'roomType' => $roomType,
-			'boardBasis' => $boardBasis,
-			'bookingKey' => $bookingKey,
-			'adults' => $adults,
-			'children' => $children,
-			'totalRooms' => $totalRooms,
-			'rates' => $rates,
-			'childrenAges' => $childrenAges,
-		));
+		try {
+			$apiResponse = $this->rezlive_api->preBook(array(
+				'searchSessionId' => $searchSessionId,
+				'arrivalDate' => $arrivalDateFormatted,
+				'departureDate' => $departureDateFormatted,
+				'countryCode' => $countryCode,
+				'cityCode' => $cityCode,
+				'hotelId' => $hotelId,
+				'totalRate' => $totalRate,
+				'currency' => $currency,
+				'roomType' => $roomType,
+				'boardBasis' => $boardBasis,
+				'bookingKey' => $bookingKey,
+				'adults' => $adults,
+				'children' => $children,
+				'totalRooms' => $totalRooms,
+				'rates' => $rates,
+				'childrenAges' => $childrenAges,
+			));
+		} catch (Exception $e) {
+			log_message('error', 'PreBook API Exception: ' . $e->getMessage());
+			$apiResponse = null;
+			$data['apiError'] = $e->getMessage();
+		}
 
 		$data['apiResponse'] = $apiResponse;
 
@@ -190,9 +215,28 @@ class Booking extends CI_Controller
 		$children = (int) $bookingData['children'];
 		$totalRooms = (int) $bookingData['totalRooms'];
 
-		// Format dates for API (d/m/Y)
-		$arrivalDateFormatted = Carbon::createFromFormat('Y-m-d', $arrivalDate)->format('d/m/Y');
-		$departureDateFormatted = Carbon::createFromFormat('Y-m-d', $departureDate)->format('d/m/Y');
+		// Format dates for API (d/m/Y) - handle both Y-m-d and d/m/Y formats
+		try {
+			$arrivalCarbon = Carbon::createFromFormat('Y-m-d', $arrivalDate);
+		} catch (Exception $e) {
+			try {
+				$arrivalCarbon = Carbon::createFromFormat('d/m/Y', $arrivalDate);
+			} catch (Exception $e) {
+				$arrivalCarbon = Carbon::now();
+			}
+		}
+		$arrivalDateFormatted = $arrivalCarbon->format('d/m/Y');
+
+		try {
+			$departureCarbon = Carbon::createFromFormat('Y-m-d', $departureDate);
+		} catch (Exception $e) {
+			try {
+				$departureCarbon = Carbon::createFromFormat('d/m/Y', $departureDate);
+			} catch (Exception $e) {
+				$departureCarbon = Carbon::now()->addDay();
+			}
+		}
+		$departureDateFormatted = $departureCarbon->format('d/m/Y');
 
 		// Calculate room rates (pipe-separated for multiple rooms)
 		$rates = $this->booking_model->calculate_room_rates($totalRate, $totalRooms);
@@ -282,7 +326,7 @@ class Booking extends CI_Controller
 			'children' => $children,
 			'childrenAges' => $childrenAges,
 			'totalRooms' => $totalRooms,
-			'rates' => $rates,
+			'totalRate' => $totalRate,
 			'guests' => $guests,
 		));
 

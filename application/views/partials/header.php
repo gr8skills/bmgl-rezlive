@@ -8,7 +8,7 @@
 <div class="navbar p-0">
 	<nav class="navbar navbar-expand-lg">
 		<div class="container home-navbar-links">
-			<a class="navbar-brand" href="index.html">
+			<a class="navbar-brand" href="<?= base_url() ?>">
 				<img src="<?= base_url('assets/images/logo.png') ?>" alt="Logo" height="100%">
 			</a>
 			<button class="navbar-toggler border-0 bg-transparent" type="button" data-bs-toggle="modal"
