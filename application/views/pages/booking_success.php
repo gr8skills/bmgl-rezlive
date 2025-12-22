@@ -80,8 +80,11 @@ $totalNaira = $totalRate * USD_TO_NGN_RATE;
 
 						<div class="row mt-4">
 							<div class="col-12 text-center">
-								<a href="<?= site_url('home') ?>" class="btn btn-primary px-5">
+								<a href="<?= site_url('home') ?>" class="btn btn-primary px-4 me-2">
 									<i class="ri-home-line"></i> Back to Home
+								</a>
+								<a href="<?= site_url('cancellation') ?>" class="btn btn-outline-danger px-4">
+									<i class="ri-close-circle-line"></i> Cancel Booking
 								</a>
 							</div>
 						</div>

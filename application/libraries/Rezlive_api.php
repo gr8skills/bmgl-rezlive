@@ -380,6 +380,82 @@ class Rezlive_api
 	}
 
 	/**
+	 * Get booked hotel details
+	 * @param string $bookingId Booking ID
+	 * @param string $bookingCode Booking Code/Reference
+	 * @return SimpleXMLElement|null
+	 */
+	public function getBookingDetails($bookingId, $bookingCode)
+	{
+		$xmlString = "<?xml version=\"1.0\"?>
+<GetBookingRequest>
+    {$this->getAuthXml()}
+    <BookingId>{$bookingId}</BookingId>
+    <BookingCode>{$bookingCode}</BookingCode>
+</GetBookingRequest>";
+
+		return $this->request('getbookingdetails', $xmlString);
+	}
+
+	/**
+	 * Get booking confirmation details
+	 * @param string $bookingId Booking ID
+	 * @param string $bookingCode Booking Code/Reference
+	 * @return SimpleXMLElement|null
+	 */
+	public function getConfirmationDetails($bookingId, $bookingCode)
+	{
+		$xmlString = "<?xml version=\"1.0\"?>
+<HotelConfirmationRequest>
+    {$this->getAuthXml()}
+    <Confirmation>
+        <BookingId>{$bookingId}</BookingId>
+        <BookingCode>{$bookingCode}</BookingCode>
+    </Confirmation>
+</HotelConfirmationRequest>";
+
+		return $this->request('getConfirmationDetails', $xmlString);
+	}
+
+	/**
+	 * Get cancellation policy after booking
+	 * @param string $bookingId Booking ID
+	 * @param string $bookingCode Booking Code/Reference
+	 * @return SimpleXMLElement|null
+	 */
+	public function getCancellationPolicy($bookingId, $bookingCode)
+	{
+		$xmlString = "<?xml version=\"1.0\"?>
+<CancellationPolicyAfterBookingRequest>
+    {$this->getAuthXml()}
+    <BookingId>{$bookingId}</BookingId>
+    <BookingCode>{$bookingCode}</BookingCode>
+</CancellationPolicyAfterBookingRequest>";
+
+		return $this->request('getCancellationPolicyAfterBooking', $xmlString);
+	}
+
+	/**
+	 * Cancel a hotel booking
+	 * @param string $bookingId Booking ID
+	 * @param string $bookingCode Booking Code/Reference
+	 * @return SimpleXMLElement|null
+	 */
+	public function cancelHotel($bookingId, $bookingCode)
+	{
+		$xmlString = "<?xml version=\"1.0\" ?>
+<CancellationRequest>
+    {$this->getAuthXml()}
+    <Cancellation>
+        <BookingId>{$bookingId}</BookingId>
+        <BookingCode>{$bookingCode}</BookingCode>
+    </Cancellation>
+</CancellationRequest>";
+
+		return $this->request('cancelhotel', $xmlString);
+	}
+
+	/**
 	 * Save XML to file for debugging
 	 * @param string $type 'request' or 'response'
 	 * @param string $xml XML content
